@@ -1,86 +1,138 @@
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { Link, Stack } from 'expo-router';
-import { MoonStarIcon, StarIcon, SunIcon } from 'lucide-react-native';
+import { CardStack } from '@/components/modules/onboarding/CardStack';
+import { Stack, useRouter } from 'expo-router';
 import * as React from 'react';
-import { Image, type ImageStyle, View } from 'react-native';
-import { Uniwind, useUniwind } from 'uniwind';
-
-const LOGO = {
-  light: require('@/assets/images/react-native-reusables-light.png'),
-  dark: require('@/assets/images/react-native-reusables-dark.png'),
-};
+import { useEffect } from 'react';
+import { Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
 const SCREEN_OPTIONS = {
-  title: 'React Native Reusables',
-  headerTransparent: true,
-  headerRight: () => <ThemeToggle />,
+  headerShown: false,
 };
 
-const IMAGE_STYLE: ImageStyle = {
-  height: 76,
-  width: 76,
-};
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export default function Screen() {
-  const { theme } = useUniwind();
+function AnimatedButton({
+  label,
+  variant,
+  onPress,
+}: {
+  label: string;
+  variant: 'outline' | 'filled';
+  onPress?: () => void;
+}) {
+  const scale = useSharedValue(1);
+
+  const containerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const isFilled = variant === 'filled';
+
+  return (
+    <AnimatedPressable
+      onPressIn={() => {
+        scale.value = withSpring(0.97, { damping: 15, stiffness: 200 });
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 15, stiffness: 200 });
+      }}
+      onPress={onPress}
+      style={[
+        {
+          height: 54,
+          borderRadius: 27,
+          backgroundColor: isFilled ? '#1C1C1E' : '#FFFFFF',
+          alignItems: 'center',
+          justifyContent: 'center',
+          ...(isFilled
+            ? {}
+            : { borderWidth: 1, borderColor: '#E8E5E0' }),
+        },
+        containerStyle,
+      ]}
+    >
+      <Text
+        font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+        style={{ fontSize: 16, color: isFilled ? '#FFFFFF' : '#1C1C1E' }}
+      >
+        {label}
+      </Text>
+    </AnimatedPressable>
+  );
+}
+
+export default function OnboardingScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   return (
     <>
       <Stack.Screen options={SCREEN_OPTIONS} />
-      <View className="flex-1 items-center justify-center gap-8 p-4">
-        <Image source={LOGO[theme ?? 'light']} style={IMAGE_STYLE} resizeMode="contain" />
-        <View className="gap-2 p-4">
-          <Text className="ios:text-foreground text-muted-foreground font-mono text-sm">
-            1. Edit <Text variant="code">app/index.tsx</Text> to get started.
-          </Text>
-          <Text
-            font={{
-              family: 'SourceSans3',
-            }}
-            className="ios:text-foreground text-muted-foreground font-mono text-sm">
-            2. Save to see your changes instantly.
-          </Text>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: '#F5F2ED',
+          paddingHorizontal: 24,
+          paddingTop: insets.top + 16,
+          paddingBottom: insets.bottom + 8,
+          justifyContent: 'space-between',
+        }}
+      >
+        <View style={{ gap: 12 }}>
+          <View>
+            <Text
+              font={{ family: 'PlayfairDisplay', weight: 'Bold' }}
+              style={{ fontSize: 34, lineHeight: 40, color: '#1C1C1E', letterSpacing: -0.5 }}
+            >
+              Easy to pay at home{'\n'}and away
+            </Text>
+          </View>
+          <View>
+            <Text
+              font={{ family: 'SourceSans3' }}
+              style={{ fontSize: 15, lineHeight: 21, color: '#7A7A7A' }}
+            >
+              Some cards available on paid plans or in{'\n'}certain countries only.
+            </Text>
+          </View>
         </View>
-        <View className="flex-row gap-2">
-          <Link href="https://reactnativereusables.com" asChild>
-            <Button>
-              <Text>Browse the Docs</Text>
-            </Button>
-          </Link>
-          <Link href="https://github.com/founded-labs/react-native-reusables" asChild>
-            <Button variant="ghost">
-              <Text>Star the Repo</Text>
-              <Icon as={StarIcon} />
-            </Button>
-          </Link>
+
+        <View style={{ alignItems: 'center', gap: 16 }}>
+          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+            <View
+              style={{
+                width: 24,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: '#1C1C1E',
+              }}
+            />
+            <View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: '#C5C5C5',
+              }}
+            />
+          </View>
+
+          <CardStack />
+        </View>
+
+        <View style={{ gap: 10 }}>
+          <AnimatedButton label="Create account" variant="outline" onPress={() => router.push('/(auth)/create-account/phone')} />
+          <AnimatedButton label="Sign in" variant="filled" onPress={() => router.push('/(auth)/login/email')} />
         </View>
       </View>
     </>
-  );
-}
-
-const THEME_ICONS = {
-  light: SunIcon,
-  dark: MoonStarIcon,
-};
-
-function ThemeToggle() {
-  const { theme } = useUniwind();
-
-  function toggleTheme() {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    Uniwind.setTheme(newTheme);
-  }
-
-  return (
-    <Button
-      onPressIn={toggleTheme}
-      size="icon"
-      variant="ghost"
-      className="ios:size-9 web:mx-4 rounded-full">
-      <Icon as={THEME_ICONS[theme ?? 'light']} className="size-5" />
-    </Button>
   );
 }
