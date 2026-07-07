@@ -10,7 +10,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SessionProvider } from '@/providers/session-provider';
 import { OnboardingProvider } from '@/providers/onboarding-provider';
-import { useUniwind } from 'uniwind';
+import { Uniwind } from 'uniwind';
 import { useEffect } from 'react';
 
 export {
@@ -20,9 +20,9 @@ export {
 
 // Keep the splash screen visible while we load fonts
 SplashScreen.preventAutoHideAsync();
+Uniwind.setTheme('light');
 
 export default function RootLayout() {
-  const { theme } = useUniwind();
   const [fontsLoaded, fontError] = useFonts(fontAssets);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
+    <ThemeProvider value={NAV_THEME.light}>
       <SessionProvider>
         <OnboardingProvider>
           <StatusBar style={'dark'} />

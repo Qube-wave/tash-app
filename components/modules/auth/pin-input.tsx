@@ -25,6 +25,8 @@ const KEYS = [
   ['', '0', 'delete'],
 ];
 
+const KEY_SIZE = 80;
+
 export function PinInput({ length = 4, onComplete }: Props) {
   const colors = useColors();
   const [pin, setPin] = useState('');
@@ -80,12 +82,12 @@ export function PinInput({ length = 4, onComplete }: Props) {
         })}
       </View>
 
-      <View style={{ gap: 14, marginTop: 48 }}>
+      <View style={{ gap: 16, marginTop: 44 }}>
         {KEYS.map((row, rowIndex) => (
-          <View key={rowIndex} style={{ flexDirection: 'row', justifyContent: 'center', gap: 22 }}>
+          <View key={rowIndex} style={{ flexDirection: 'row', justifyContent: 'center', gap: 18 }}>
             {row.map((key, keyIndex) => {
               if (key === '') {
-                return <View key={keyIndex} style={{ width: 72, height: 72 }} />;
+                return <View key={keyIndex} style={{ width: KEY_SIZE, height: KEY_SIZE }} />;
               }
 
               if (key === 'delete') {
@@ -94,8 +96,8 @@ export function PinInput({ length = 4, onComplete }: Props) {
                     key={keyIndex}
                     onPress={handleDelete}
                     style={{
-                      width: 72,
-                      height: 72,
+                      width: KEY_SIZE,
+                      height: KEY_SIZE,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}>
@@ -124,17 +126,16 @@ export function PinInput({ length = 4, onComplete }: Props) {
                   key={keyIndex}
                   onPress={() => handlePress(key)}
                   style={({ pressed }) => ({
-                    width: 72,
-                    height: 72,
-                    borderRadius: 36,
+                    width: KEY_SIZE,
+                    height: KEY_SIZE,
+                    borderRadius: KEY_SIZE / 2,
                     backgroundColor: pressed ? colors.surfaceActive : colors.surface,
                     alignItems: 'center',
-                    flex: 1,
                     justifyContent: 'center',
                   })}>
                   <Text
                     font={{ family: 'SourceSans3', weight: 'Medium' }}
-                    style={{ fontSize: 18, color: colors.heading }}>
+                    style={{ fontSize: 28, color: colors.heading }}>
                     {key}
                   </Text>
                 </Pressable>

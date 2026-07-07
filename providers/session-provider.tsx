@@ -1,6 +1,8 @@
 import {
   ApiRequestError,
   apiClient,
+  logoutAllDevices,
+  logoutCurrentDevice,
   refreshSession,
   unlockSession,
   type AuthResponse,
@@ -24,6 +26,7 @@ type SessionContextValue = {
   unlockWithPin: (pin: string) => Promise<void>;
   refreshAccessToken: () => Promise<string | null>;
   logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -66,6 +69,32 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setStatus('signedOut');
   }, []);
 
+  const logout = useCallback(async () => {
+    const token = refreshToken ?? (await getStoredRefreshToken());
+
+    if (token && accessTokenSnapshot) {
+      try {
+        await logoutCurrentDevice({ refreshToken: token }, { accessToken: accessTokenSnapshot });
+      } catch {
+        // Local session cleanup should still happen if the network/logout request fails.
+      }
+    }
+
+    await clearSession();
+  }, [clearSession, refreshToken]);
+
+  const logoutAll = useCallback(async () => {
+    if (accessTokenSnapshot) {
+      try {
+        await logoutAllDevices({ accessToken: accessTokenSnapshot });
+      } catch {
+        // Local session cleanup should still happen if the network/logout request fails.
+      }
+    }
+
+    await clearSession();
+  }, [clearSession]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -95,7 +124,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     async (authResponse: AuthResponse) => {
       await applyAuthResponse(authResponse);
     },
-    [applyAuthResponse],
+    [applyAuthResponse]
   );
 
   const unlockWithPin = useCallback(
@@ -118,7 +147,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    [applyAuthResponse, clearSession, refreshToken],
+    [applyAuthResponse, clearSession, refreshToken]
   );
 
   const refreshAccessToken = useCallback(async () => {
@@ -148,18 +177,21 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       signInWithAuthResponse,
       unlockWithPin,
       refreshAccessToken,
-      logout: clearSession,
+      logout,
+      logoutAll,
     }),
     [
       accessToken,
       clearSession,
+      logout,
+      logoutAll,
       refreshAccessToken,
       refreshToken,
       signInWithAuthResponse,
       status,
       unlockWithPin,
       user,
-    ],
+    ]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
