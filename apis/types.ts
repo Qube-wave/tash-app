@@ -69,10 +69,12 @@ export type Wallet = {
   status: 'active' | string;
 };
 
+export type TransactionDirection = 'credit' | 'debit' | string;
+
 export type WalletTransaction = {
   uuid: string;
   reference: string;
-  direction: 'credit' | 'debit';
+  direction: TransactionDirection;
   entryType: string;
   amount: number;
   currency: string;
@@ -81,6 +83,40 @@ export type WalletTransaction = {
   status: string;
   metadata: Record<string, unknown>;
   createdAt: string;
+};
+
+export type TransactionRecord = {
+  uuid: string;
+  reference: string;
+  type?: string;
+  entryType?: string;
+  direction: TransactionDirection;
+  amount: number;
+  currency: string;
+  status: string;
+  description?: string | null;
+  balanceBefore?: number;
+  balanceAfter?: number;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type TransactionListFilters = {
+  type?: string;
+  status?: string;
+  direction?: TransactionDirection;
+  currency?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  minimumAmount?: number;
+  maximumAmount?: number;
+  cursor?: string;
+  limit?: number;
+};
+
+export type TransactionListResponse = {
+  items: TransactionRecord[];
+  nextCursor: string | null;
 };
 
 export type Bank = {
@@ -104,7 +140,7 @@ export type ResolvedRecipient = {
   lastName: string;
 };
 
-export type TransferStatus = 'pending' | 'successful' | 'failed' | string;
+export type TransferStatus = 'pending' | 'processing' | 'successful' | 'failed' | string;
 
 export type TashTransfer = {
   reference: string;
@@ -205,6 +241,30 @@ export type DirectDebitFunding = {
   currency: string;
   walletUuid: string;
   mandateUuid: string;
+};
+
+export type VirtualAccountType = 'static' | 'temporary' | string;
+export type VirtualAccountPurpose = 'wallet_funding' | string;
+
+export type VirtualAccount = {
+  uuid: string;
+  userId?: number;
+  walletId?: number;
+  walletUuid?: string;
+  provider?: string;
+  providerCustomerId?: string | null;
+  providerAccountId?: string | null;
+  accountName: string;
+  accountNumber: string;
+  bankName: string;
+  bankCode: string;
+  currency: string;
+  type: VirtualAccountType;
+  purpose: VirtualAccountPurpose;
+  status: string;
+  expiresAt: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt?: string;
 };
 
 export type PaymentSettings = {

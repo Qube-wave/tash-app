@@ -1,4 +1,13 @@
+import {
+  ApiRequestError,
+  listTransactions,
+  listWallets,
+  type TransactionRecord,
+  type Wallet,
+} from '@/apis';
 import { Text } from '@/components/ui/text';
+import { useSession } from '@/providers/session-provider';
+import { useRouter } from 'expo-router';
 import {
   Bell,
   CircleDollarSign,
@@ -9,24 +18,9 @@ import {
   Smartphone,
   WalletCards,
 } from 'lucide-react-native';
-import { Pressable, ScrollView, View } from 'react-native';
+import * as React from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-type Transaction = {
-  title: string;
-  date: string;
-  amount: string;
-  positive?: boolean;
-  icon: React.ComponentType<{ color: string; size: number; strokeWidth?: number }>;
-};
-
-const TRANSACTIONS: Transaction[] = [
-  { title: 'Shopping', date: 'Today', amount: '-₦75.50', icon: ShoppingBag },
-  { title: 'Salary', date: 'Yesterday', amount: '+₦5,000', positive: true, icon: WalletCards },
-  { title: 'Cash', date: 'Last Month', amount: '-₦200.00', icon: HandCoins },
-  { title: 'Utilities', date: 'Last Month', amount: '-₦120.00', icon: CircleDollarSign },
-  { title: 'Mobile', date: 'Last Month', amount: '-₦10.00', icon: Smartphone },
-];
 
 const BG = '#FAFAF1';
 const INK = '#151713';
@@ -34,11 +28,60 @@ const MUTED = '#6F746A';
 const ORANGE = '#FF6A12';
 const GREEN = '#168A48';
 const SOFT = '#EFF0E6';
+const DANGER = '#B42318';
+
+const TRANSACTION_ICONS = [ShoppingBag, WalletCards, HandCoins, CircleDollarSign, Smartphone];
+
+function formatMinorAmount(value: number, currency = 'NGN') {
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value / 100);
+}
+
+function formatTransactionDate(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) {
+    return 'Today';
+  }
+
+  if (date.toDateString() === yesterday.toDateString()) {
+    return 'Yesterday';
+  }
+
+  return new Intl.DateTimeFormat('en-NG', { month: 'short', day: 'numeric' }).format(date);
+}
+
+function titleCase(value: string) {
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function getFirstName(name?: string | null) {
+  return name?.trim() || 'there';
+}
 
 function Header() {
+  const { user } = useSession();
+  const initials = `${user?.profile.firstName?.[0] ?? ''}${user?.profile.lastName?.[0] ?? ''}`;
+
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
         <View
           style={{
             width: 40,
@@ -52,12 +95,15 @@ function Header() {
           }}>
           <Text
             font={{ family: 'PlayfairDisplay', weight: 'Black' }}
-            style={{ fontSize: 20, color: INK }}>
-            T
+            style={{ fontSize: 18, color: INK }}>
+            {initials.toUpperCase() || 'T'}
           </Text>
         </View>
-        <Text font={{ family: 'SourceSans3', weight: 'Bold' }} style={{ fontSize: 19, color: INK }}>
-          Hello, Robert
+        <Text
+          font={{ family: 'SourceSans3', weight: 'Bold' }}
+          numberOfLines={1}
+          style={{ flex: 1, fontSize: 19, color: INK }}>
+          Hello, {getFirstName(user?.profile.firstName)}
         </Text>
       </View>
 
@@ -76,7 +122,17 @@ function Header() {
   );
 }
 
-function BalanceCard() {
+function BalanceCard({
+  wallet,
+  isLoading,
+  onAdd,
+  onTransfer,
+}: {
+  wallet: Wallet | null;
+  isLoading: boolean;
+  onAdd: () => void;
+  onTransfer: () => void;
+}) {
   return (
     <View
       style={{
@@ -91,16 +147,29 @@ function BalanceCard() {
       <Text
         font={{ family: 'SourceSans3', weight: 'SemiBold' }}
         style={{ color: '#D7D7D0', fontSize: 14 }}>
-        Total Balance
+        Available Balance
       </Text>
+      <View style={{ minHeight: 40, justifyContent: 'center' }}>
+        {isLoading ? (
+          <ActivityIndicator color={ORANGE} style={{ alignSelf: 'flex-start', marginTop: 8 }} />
+        ) : (
+          <Text
+            font={{ family: 'SourceSans3', weight: 'Bold' }}
+            style={{ color: '#FFFFFF', fontSize: 32, lineHeight: 38, marginTop: 2 }}>
+            {wallet ? formatMinorAmount(wallet.availableBalance, wallet.currency) : '₦0.00'}
+          </Text>
+        )}
+      </View>
+
       <Text
-        font={{ family: 'SourceSans3', weight: 'Bold' }}
-        style={{ color: '#FFFFFF', fontSize: 32, lineHeight: 38, marginTop: 2 }}>
-        ₦13,938
+        font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+        style={{ color: '#8E8E86', fontSize: 13, marginTop: 4 }}>
+        {wallet ? `${wallet.currency} wallet • ${titleCase(wallet.status)}` : 'No wallet found'}
       </Text>
 
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 22 }}>
         <Pressable
+          onPress={onAdd}
           style={{
             flex: 1,
             height: 48,
@@ -119,6 +188,7 @@ function BalanceCard() {
           </Text>
         </Pressable>
         <Pressable
+          onPress={onTransfer}
           style={{
             flex: 1,
             height: 48,
@@ -143,8 +213,10 @@ function BalanceCard() {
   );
 }
 
-function TransactionRow({ item }: { item: Transaction }) {
-  const Icon = item.icon;
+function TransactionRow({ item, index }: { item: TransactionRecord; index: number }) {
+  const Icon = TRANSACTION_ICONS[index % TRANSACTION_ICONS.length];
+  const isCredit = item.direction === 'credit';
+  const label = item.description || item.entryType || item.type || 'Transaction';
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 13 }}>
@@ -162,18 +234,19 @@ function TransactionRow({ item }: { item: Transaction }) {
       </View>
       <View style={{ flex: 1 }}>
         <Text font={{ family: 'SourceSans3', weight: 'Bold' }} style={{ fontSize: 15, color: INK }}>
-          {item.title}
+          {titleCase(label)}
         </Text>
         <Text
           font={{ family: 'SourceSans3', weight: 'SemiBold' }}
           style={{ fontSize: 13, color: MUTED, marginTop: 1 }}>
-          {item.date}
+          {formatTransactionDate(item.createdAt)} • {titleCase(item.status)}
         </Text>
       </View>
       <Text
         font={{ family: 'SourceSans3', weight: 'Bold' }}
-        style={{ fontSize: 15, color: item.positive ? GREEN : INK }}>
-        {item.amount}
+        style={{ fontSize: 15, color: isCredit ? GREEN : INK }}>
+        {isCredit ? '+' : '-'}
+        {formatMinorAmount(item.amount, item.currency)}
       </Text>
     </View>
   );
@@ -181,18 +254,87 @@ function TransactionRow({ item }: { item: Transaction }) {
 
 export default function DashboardHome() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const [wallet, setWallet] = React.useState<Wallet | null>(null);
+  const [transactions, setTransactions] = React.useState<TransactionRecord[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+
+  const loadDashboard = React.useCallback(async (signal?: AbortSignal) => {
+    setErrorMessage(null);
+
+    try {
+      const [wallets, transactionPage] = await Promise.all([
+        listWallets({ signal }),
+        listTransactions({ limit: 5 }, { signal }),
+      ]);
+
+      setWallet(wallets[0] ?? null);
+      setTransactions(transactionPage.items);
+    } catch (error) {
+      if (signal?.aborted) {
+        return;
+      }
+
+      setErrorMessage(error instanceof ApiRequestError ? error.message : 'Unable to load wallet.');
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+
+    setIsLoading(true);
+    loadDashboard(controller.signal).finally(() => {
+      if (!controller.signal.aborted) {
+        setIsLoading(false);
+      }
+    });
+
+    return () => controller.abort();
+  }, [loadDashboard]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadDashboard();
+    setIsRefreshing(false);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         contentContainerStyle={{
           paddingTop: insets.top + 22,
           paddingHorizontal: 24,
           paddingBottom: insets.bottom + 104,
         }}>
         <Header />
-        <BalanceCard />
+        <BalanceCard
+          wallet={wallet}
+          isLoading={isLoading}
+          onAdd={() => router.push('/wallet/add' as never)}
+          onTransfer={() => router.push('/wallet/transfer' as never)}
+        />
+
+        {errorMessage ? (
+          <View
+            style={{
+              marginTop: 18,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: '#FECACA',
+              backgroundColor: '#FFF1F0',
+              padding: 14,
+            }}>
+            <Text
+              font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+              style={{ color: DANGER, fontSize: 14 }}>
+              {errorMessage}
+            </Text>
+          </View>
+        ) : null}
 
         <View
           style={{
@@ -216,9 +358,24 @@ export default function DashboardHome() {
         </View>
 
         <View style={{ marginTop: 8 }}>
-          {TRANSACTIONS.map((item) => (
-            <TransactionRow key={`${item.title}-${item.date}`} item={item} />
-          ))}
+          {transactions.length > 0 ? (
+            transactions.map((item, index) => (
+              <TransactionRow key={item.uuid || item.reference} item={item} index={index} />
+            ))
+          ) : !isLoading ? (
+            <View style={{ paddingVertical: 26, alignItems: 'center' }}>
+              <Text
+                font={{ family: 'SourceSans3', weight: 'Bold' }}
+                style={{ color: INK, fontSize: 16 }}>
+                No transactions yet
+              </Text>
+              <Text
+                font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+                style={{ marginTop: 3, color: MUTED, fontSize: 14 }}>
+                Your wallet activity will appear here.
+              </Text>
+            </View>
+          ) : null}
         </View>
       </ScrollView>
     </View>
