@@ -1,14 +1,9 @@
-<<<<<<< HEAD
 import { ApiRequestError, completeOnboardingPin } from '@/apis';
 import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
 import { PinInput } from '@/components/modules/auth/pin-input';
 import { Text } from '@/components/ui/text';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { useSession } from '@/providers/session-provider';
-=======
-import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
-import { PinInput } from '@/components/modules/auth/pin-input';
->>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -25,6 +20,7 @@ export default function PinSetupScreen() {
   const router = useRouter();
   const { signInWithAuthResponse } = useSession();
   const { clearOnboarding, onboardingSessionToken } = useOnboarding();
+
   const [attemptKey, setAttemptKey] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,7 +40,11 @@ export default function PinSetupScreen() {
     setErrorMessage(null);
 
     try {
-      const authResponse = await completeOnboardingPin({ onboardingSessionToken, pin });
+      const authResponse = await completeOnboardingPin({
+        onboardingSessionToken,
+        pin,
+      });
+
       await signInWithAuthResponse(authResponse);
       clearOnboarding();
       router.replace('/(app)/(tabs)');
@@ -59,28 +59,38 @@ export default function PinSetupScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
+
       <AuthScreenLayout
         heading="Create a PIN"
         subtitle="You'll use this PIN to unlock Tash and authorize transactions."
-        showContinue={false}
-      >
+        showContinue={false}>
         <View style={{ flex: 1 }}>
           {errorMessage ? (
             <Text
               font={{ family: 'SourceSans3', weight: 'Medium' }}
-              style={{ color: '#C75A3A', fontSize: 14, lineHeight: 20, textAlign: 'center' }}
-            >
+              style={{
+                color: '#C75A3A',
+                fontSize: 14,
+                lineHeight: 20,
+                textAlign: 'center',
+              }}>
               {errorMessage}
             </Text>
           ) : null}
+
           {isSubmitting ? (
             <Text
               font={{ family: 'SourceSans3', weight: 'Medium' }}
-              style={{ color: '#A94E2C', fontSize: 14, lineHeight: 20, textAlign: 'center' }}
-            >
+              style={{
+                color: '#A94E2C',
+                fontSize: 14,
+                lineHeight: 20,
+                textAlign: 'center',
+              }}>
               Creating PIN...
             </Text>
           ) : null}
+
           <PinInput key={attemptKey} onComplete={handleComplete} />
         </View>
       </AuthScreenLayout>

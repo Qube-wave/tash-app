@@ -1,5 +1,4 @@
 import { OnboardingCarousel } from '@/components/modules/onboarding/onboarding-carousel';
-<<<<<<< HEAD
 import { useSession } from '@/providers/session-provider';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
@@ -22,9 +21,5 @@ export default function OnboardingScreen() {
     return null;
   }
 
-=======
-
-export default function OnboardingScreen() {
->>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
   return <OnboardingCarousel />;
 }

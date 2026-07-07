@@ -34,6 +34,7 @@ export function PinInput({ length = 4, onComplete }: Props) {
 
   const handlePress = (digit: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     if (pin.length < length) {
       const newPin = pin + digit;
       setPin(newPin);
@@ -51,6 +52,7 @@ export function PinInput({ length = 4, onComplete }: Props) {
 
   const handleDelete = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     if (pin.length > 0) {
       dotScale[pin.length - 1].value = withTiming(1, { duration: 150 });
       setPin(pin.slice(0, -1));
@@ -82,13 +84,15 @@ export function PinInput({ length = 4, onComplete }: Props) {
         })}
       </View>
 
-<<<<<<< HEAD
       <View style={{ gap: 16, marginTop: 44 }}>
-=======
-      <View style={{ gap: 14, marginTop: 48 }}>
->>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
         {KEYS.map((row, rowIndex) => (
-          <View key={rowIndex} style={{ flexDirection: 'row', justifyContent: 'center', gap: 18 }}>
+          <View
+            key={rowIndex}
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: 18,
+            }}>
             {row.map((key, keyIndex) => {
               if (key === '') {
                 return <View key={keyIndex} style={{ width: KEY_SIZE, height: KEY_SIZE }} />;
@@ -130,15 +134,9 @@ export function PinInput({ length = 4, onComplete }: Props) {
                   key={keyIndex}
                   onPress={() => handlePress(key)}
                   style={({ pressed }) => ({
-<<<<<<< HEAD
                     width: KEY_SIZE,
                     height: KEY_SIZE,
                     borderRadius: KEY_SIZE / 2,
-=======
-                    width: 72,
-                    height: 72,
-                    borderRadius: 36,
->>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
                     backgroundColor: pressed ? colors.surfaceActive : colors.surface,
                     alignItems: 'center',
                     flex: 1,
@@ -146,11 +144,7 @@ export function PinInput({ length = 4, onComplete }: Props) {
                   })}>
                   <Text
                     font={{ family: 'SourceSans3', weight: 'Medium' }}
-<<<<<<< HEAD
                     style={{ fontSize: 28, color: colors.heading }}>
-=======
-                    style={{ fontSize: 18, color: colors.heading }}>
->>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
                     {key}
                   </Text>
                 </Pressable>

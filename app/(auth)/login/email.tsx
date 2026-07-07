@@ -1,12 +1,7 @@
-<<<<<<< HEAD
 import { ApiRequestError, sendLoginEmailVerification } from '@/apis';
-import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
-import { AuthTextInput } from '@/components/modules/auth/auth-text-input';
 import { Text } from '@/components/ui/text';
-=======
 import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
 import { AuthTextInput } from '@/components/modules/auth/auth-text-input';
->>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -57,8 +52,7 @@ export default function LoginEmailScreen() {
         subtitle="Enter your email address to sign in."
         continueLabel={isSubmitting ? 'Sending code...' : 'Sign in'}
         onContinue={handleContinue}
-        continueDisabled={!emailIsValid || isSubmitting}
-      >
+        continueDisabled={!emailIsValid || isSubmitting}>
         <View style={{ gap: 16 }}>
           <AuthTextInput
             value={email}
@@ -75,12 +69,10 @@ export default function LoginEmailScreen() {
           <Pressable
             disabled={isSubmitting}
             onPress={() => router.replace('/(auth)/login/phone')}
-            style={{ alignItems: 'center', opacity: isSubmitting ? 0.5 : 1 }}
-          >
+            style={{ alignItems: 'center', opacity: isSubmitting ? 0.5 : 1 }}>
             <Text
               font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-              style={{ fontSize: 15, color: '#C75A3A', textDecorationLine: 'underline' }}
-            >
+              style={{ fontSize: 15, color: '#C75A3A', textDecorationLine: 'underline' }}>
               Use phone number instead
             </Text>
           </Pressable>
@@ -88,8 +80,7 @@ export default function LoginEmailScreen() {
         {errorMessage ? (
           <Text
             font={{ family: 'SourceSans3', weight: 'Medium' }}
-            style={{ color: '#C75A3A', fontSize: 14, lineHeight: 20, marginTop: 12 }}
-          >
+            style={{ color: '#C75A3A', fontSize: 14, lineHeight: 20, marginTop: 12 }}>
             {errorMessage}
           </Text>
         ) : null}

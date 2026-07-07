@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import {
   ApiRequestError,
   completeSignupEmailVerification,
@@ -13,13 +12,6 @@ import { Text } from '@/components/ui/text';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-=======
-import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
-import { OtpInput } from '@/components/modules/auth/otp-input';
-import { Text } from '@/components/ui/text';
-import { useColors } from '@/lib/use-colors';
-import { Stack, useRouter } from 'expo-router';
->>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
 import { Pressable, View } from 'react-native';
 
 type SignupMethod = 'email' | 'phone';
@@ -50,22 +42,34 @@ function routeForStep(step: OnboardingStep) {
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
-<<<<<<< HEAD
+
   const params = useLocalSearchParams<{
     method?: SignupMethod;
     email?: string;
     phoneNumber?: string;
   }>();
+
   const { contact, setContact, setVerifiedSession } = useOnboarding();
-  const method: SignupMethod = params.method === 'phone' ? 'phone' : contact?.method ?? 'email';
+
+  const method: SignupMethod = params.method === 'phone' ? 'phone' : (contact?.method ?? 'email');
+
   const identifier = useMemo(() => {
     const routeValue = method === 'phone' ? getParam(params.phoneNumber) : getParam(params.email);
+
     const contactValue =
-      contact?.method === 'phone' ? contact.phoneNumber : contact?.method === 'email' ? contact.email : '';
+      contact?.method === 'phone'
+        ? contact.phoneNumber
+        : contact?.method === 'email'
+          ? contact.email
+          : '';
+
     const value = routeValue ?? contactValue;
-    return method === 'phone' ? value?.trim() ?? '' : value?.trim().toLowerCase() ?? '';
+
+    return method === 'phone' ? (value?.trim() ?? '') : (value?.trim().toLowerCase() ?? '');
   }, [contact, method, params.email, params.phoneNumber]);
+
   const targetLabel = method === 'phone' ? 'phone number' : 'email address';
+
   const [attemptKey, setAttemptKey] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -74,7 +78,9 @@ export default function VerifyEmailScreen() {
 
   useEffect(() => {
     if (!identifier) {
-      router.replace(method === 'phone' ? '/(auth)/create-account/phone' : '/(auth)/create-account/email');
+      router.replace(
+        method === 'phone' ? '/(auth)/create-account/phone' : '/(auth)/create-account/email'
+      );
     }
   }, [identifier, method, router]);
 
@@ -95,14 +101,21 @@ export default function VerifyEmailScreen() {
     try {
       const response =
         method === 'phone'
-          ? await completeSignupPhoneVerification({ phoneNumber: identifier, token })
-          : await completeSignupEmailVerification({ email: identifier, token });
+          ? await completeSignupPhoneVerification({
+              phoneNumber: identifier,
+              token,
+            })
+          : await completeSignupEmailVerification({
+              email: identifier,
+              token,
+            });
 
       setVerifiedSession({
         contact: onboardingContact,
         currentStep: response.currentStep,
         onboardingSessionToken: response.onboardingSessionToken,
       });
+
       router.replace(routeForStep(response.currentStep));
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
@@ -123,9 +136,13 @@ export default function VerifyEmailScreen() {
 
     try {
       if (method === 'phone') {
-        await sendSignupPhoneVerification({ phoneNumber: identifier });
+        await sendSignupPhoneVerification({
+          phoneNumber: identifier,
+        });
       } else {
-        await sendSignupEmailVerification({ email: identifier });
+        await sendSignupEmailVerification({
+          email: identifier,
+        });
       }
 
       setContact(onboardingContact);
@@ -137,13 +154,11 @@ export default function VerifyEmailScreen() {
       setIsResending(false);
     }
   };
-=======
-  const colors = useColors();
->>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
+
       <AuthScreenLayout
         heading={method === 'phone' ? 'Verify your phone' : 'Verify your email'}
         subtitle={
@@ -151,67 +166,88 @@ export default function VerifyEmailScreen() {
             ? `Enter the 6-digit code we sent to ${identifier}.`
             : `Enter the 6-digit code we sent to your ${targetLabel}.`
         }
-        showContinue={false}
-      >
+        showContinue={false}>
         <View style={{ gap: 24 }}>
           {errorMessage ? (
             <Text
-<<<<<<< HEAD
               font={{ family: 'SourceSans3', weight: 'Medium' }}
-              style={{ color: '#C75A3A', fontSize: 14, lineHeight: 20, textAlign: 'center' }}
-=======
-              font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-              style={{ fontSize: 15, color: colors.accent }}
->>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
-            >
+              style={{
+                color: '#C75A3A',
+                fontSize: 14,
+                lineHeight: 20,
+                textAlign: 'center',
+              }}>
               {errorMessage}
             </Text>
           ) : null}
+
           {statusMessage ? (
             <Text
               font={{ family: 'SourceSans3', weight: 'Medium' }}
-              style={{ color: '#A94E2C', fontSize: 14, lineHeight: 20, textAlign: 'center' }}
-            >
+              style={{
+                color: '#A94E2C',
+                fontSize: 14,
+                lineHeight: 20,
+                textAlign: 'center',
+              }}>
               {statusMessage}
             </Text>
           ) : null}
+
           {isVerifying ? (
             <Text
               font={{ family: 'SourceSans3', weight: 'Medium' }}
-              style={{ color: '#A94E2C', fontSize: 14, lineHeight: 20, textAlign: 'center' }}
-            >
+              style={{
+                color: '#A94E2C',
+                fontSize: 14,
+                lineHeight: 20,
+                textAlign: 'center',
+              }}>
               Verifying code...
             </Text>
           ) : null}
+
           <OtpInput key={attemptKey} onComplete={handleComplete} />
+
           <View style={{ gap: 14 }}>
             <Pressable
               disabled={isResending || isVerifying}
               onPress={handleResend}
-              style={{ alignItems: 'center', opacity: isResending || isVerifying ? 0.5 : 1 }}
-            >
+              style={{
+                alignItems: 'center',
+                opacity: isResending || isVerifying ? 0.5 : 1,
+              }}>
               <Text
                 font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-                style={{ fontSize: 15, color: '#C75A3A', textDecorationLine: 'underline' }}
-              >
+                style={{
+                  fontSize: 15,
+                  color: '#C75A3A',
+                  textDecorationLine: 'underline',
+                }}>
                 {isResending ? 'Sending code...' : 'Resend code'}
               </Text>
             </Pressable>
+
             <Pressable
               disabled={isResending || isVerifying}
               onPress={() =>
                 router.replace(
                   method === 'phone'
                     ? '/(auth)/create-account/email'
-                    : '/(auth)/create-account/phone',
+                    : '/(auth)/create-account/phone'
                 )
               }
-              style={{ alignItems: 'center', opacity: isResending || isVerifying ? 0.5 : 1 }}
-            >
+              style={{
+                alignItems: 'center',
+                opacity: isResending || isVerifying ? 0.5 : 1,
+              }}>
               <Text
                 font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-                style={{ fontSize: 15, color: '#A94E2C', textDecorationLine: 'underline' }}
-              >
+                style={{
+                  fontSize: 15,
+                  color: '#A94E2C',
+                  textDecorationLine: 'underline',
+                }}>
                 {method === 'phone' ? 'Use email instead' : 'Use phone number instead'}
               </Text>
             </Pressable>

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import {
   ApiRequestError,
   completeLoginEmailVerification,
@@ -8,8 +7,6 @@ import {
   sendSignupEmailVerification,
   sendSignupPhoneVerification,
 } from '@/apis';
-=======
->>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
 import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
 import { OtpInput } from '@/components/modules/auth/otp-input';
 import { Text } from '@/components/ui/text';
@@ -53,7 +50,7 @@ export default function LoginVerifyScreen() {
   const method: LoginMethod = params.method === 'phone' ? 'phone' : 'email';
   const identifier = useMemo(() => {
     const value = method === 'phone' ? getParam(params.phoneNumber) : getParam(params.email);
-    return method === 'phone' ? value?.trim() ?? '' : value?.trim().toLowerCase() ?? '';
+    return method === 'phone' ? (value?.trim() ?? '') : (value?.trim().toLowerCase() ?? '');
   }, [method, params.email, params.phoneNumber]);
   const [attemptKey, setAttemptKey] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -162,30 +159,26 @@ export default function LoginVerifyScreen() {
             ? `We sent a verification code to ${identifier}.`
             : `We sent a verification code to your ${method === 'phone' ? 'phone' : 'email address'}.`
         }
-        showContinue={false}
-      >
+        showContinue={false}>
         <View style={{ gap: 24 }}>
           {errorMessage ? (
             <Text
               font={{ family: 'SourceSans3', weight: 'Medium' }}
-              style={{ color: '#C75A3A', fontSize: 14, lineHeight: 20, textAlign: 'center' }}
-            >
+              style={{ color: '#C75A3A', fontSize: 14, lineHeight: 20, textAlign: 'center' }}>
               {errorMessage}
             </Text>
           ) : null}
           {statusMessage ? (
             <Text
               font={{ family: 'SourceSans3', weight: 'Medium' }}
-              style={{ color: '#A94E2C', fontSize: 14, lineHeight: 20, textAlign: 'center' }}
-            >
+              style={{ color: '#A94E2C', fontSize: 14, lineHeight: 20, textAlign: 'center' }}>
               {statusMessage}
             </Text>
           ) : null}
           {isVerifying ? (
             <Text
               font={{ family: 'SourceSans3', weight: 'Medium' }}
-              style={{ color: '#A94E2C', fontSize: 14, lineHeight: 20, textAlign: 'center' }}
-            >
+              style={{ color: '#A94E2C', fontSize: 14, lineHeight: 20, textAlign: 'center' }}>
               Verifying code...
             </Text>
           ) : null}
@@ -194,24 +187,20 @@ export default function LoginVerifyScreen() {
             <Pressable
               disabled={isResending || isVerifying}
               onPress={handleResend}
-              style={{ alignItems: 'center', opacity: isResending || isVerifying ? 0.5 : 1 }}
-            >
+              style={{ alignItems: 'center', opacity: isResending || isVerifying ? 0.5 : 1 }}>
               <Text
                 font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-                style={{ fontSize: 15, color: '#C75A3A', textDecorationLine: 'underline' }}
-              >
+                style={{ fontSize: 15, color: '#C75A3A', textDecorationLine: 'underline' }}>
                 {isResending ? 'Sending code...' : 'Resend code'}
               </Text>
             </Pressable>
             <Pressable
               disabled={isResending || isVerifying}
               onPress={() => router.replace(switchTarget)}
-              style={{ alignItems: 'center', opacity: isResending || isVerifying ? 0.5 : 1 }}
-            >
+              style={{ alignItems: 'center', opacity: isResending || isVerifying ? 0.5 : 1 }}>
               <Text
                 font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-                style={{ fontSize: 15, color: '#A94E2C', textDecorationLine: 'underline' }}
-              >
+                style={{ fontSize: 15, color: '#A94E2C', textDecorationLine: 'underline' }}>
                 {switchLabel}
               </Text>
             </Pressable>

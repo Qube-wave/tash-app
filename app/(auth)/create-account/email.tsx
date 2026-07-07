@@ -1,13 +1,8 @@
-<<<<<<< HEAD
 import { ApiRequestError, sendSignupEmailVerification } from '@/apis';
 import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
 import { AuthTextInput } from '@/components/modules/auth/auth-text-input';
 import { Text } from '@/components/ui/text';
 import { useOnboarding } from '@/providers/onboarding-provider';
-=======
-import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
-import { AuthTextInput } from '@/components/modules/auth/auth-text-input';
->>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -23,6 +18,7 @@ function getErrorMessage(error: unknown) {
 export default function EmailScreen() {
   const router = useRouter();
   const { setContact } = useOnboarding();
+
   const [email, setEmail] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,10 +36,18 @@ export default function EmailScreen() {
 
     try {
       await sendSignupEmailVerification({ email: normalizedEmail });
-      setContact({ method: 'email', email: normalizedEmail });
+
+      setContact({
+        method: 'email',
+        email: normalizedEmail,
+      });
+
       router.push({
         pathname: '/(auth)/create-account/verify-email',
-        params: { method: 'email', email: normalizedEmail },
+        params: {
+          method: 'email',
+          email: normalizedEmail,
+        },
       });
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
@@ -55,13 +59,13 @@ export default function EmailScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
+
       <AuthScreenLayout
         heading="What's your email?"
         subtitle="We'll use this to keep your account secure."
         continueLabel={isSubmitting ? 'Sending code...' : 'Continue'}
         onContinue={handleContinue}
-        continueDisabled={!emailIsValid || isSubmitting}
-      >
+        continueDisabled={!emailIsValid || isSubmitting}>
         <View style={{ gap: 16 }}>
           <AuthTextInput
             value={email}
@@ -75,24 +79,35 @@ export default function EmailScreen() {
             autoComplete="email"
             editable={!isSubmitting}
           />
+
           <Pressable
             disabled={isSubmitting}
             onPress={() => router.replace('/(auth)/create-account/phone')}
-            style={{ alignItems: 'center', opacity: isSubmitting ? 0.5 : 1 }}
-          >
+            style={{
+              alignItems: 'center',
+              opacity: isSubmitting ? 0.5 : 1,
+            }}>
             <Text
               font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-              style={{ fontSize: 15, color: '#C75A3A', textDecorationLine: 'underline' }}
-            >
+              style={{
+                fontSize: 15,
+                color: '#C75A3A',
+                textDecorationLine: 'underline',
+              }}>
               Use phone number instead
             </Text>
           </Pressable>
         </View>
+
         {errorMessage ? (
           <Text
             font={{ family: 'SourceSans3', weight: 'Medium' }}
-            style={{ color: '#C75A3A', fontSize: 14, lineHeight: 20, marginTop: 12 }}
-          >
+            style={{
+              color: '#C75A3A',
+              fontSize: 14,
+              lineHeight: 20,
+              marginTop: 12,
+            }}>
             {errorMessage}
           </Text>
         ) : null}
