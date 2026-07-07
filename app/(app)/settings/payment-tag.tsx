@@ -3,7 +3,15 @@ import { Text } from '@/components/ui/text';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, AtSign } from 'lucide-react-native';
 import * as React from 'react';
-import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const BG = '#FAFAF1';
@@ -82,9 +90,21 @@ export default function PaymentTagSettingsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: BG, paddingTop: insets.top + 14 }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={0}
+      style={{ flex: 1, backgroundColor: BG }}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={{ paddingHorizontal: 24 }}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingTop: insets.top + 14,
+          paddingHorizontal: 24,
+          paddingBottom: insets.bottom + 180,
+        }}>
         <View
           style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Pressable
@@ -188,7 +208,7 @@ export default function PaymentTagSettingsScreen() {
             </Text>
           )}
         </Pressable>
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

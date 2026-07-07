@@ -1,6 +1,6 @@
-import { ApiRequestError, updateTransactionPin } from '@/apis';
+import { ApiRequestError, authorizeDirectDebitMandate } from '@/apis';
 import { Text } from '@/components/ui/text';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ShieldCheck } from 'lucide-react-native';
 import * as React from 'react';
 import {
@@ -21,77 +21,35 @@ const ORANGE = '#FF6A12';
 const LINE = '#DFE1D4';
 const DANGER = '#B42318';
 
-function PinField({
-  value,
-  onChangeText,
-  placeholder,
-}: {
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder: string;
-}) {
-  return (
-    <TextInput
-      value={value}
-      onChangeText={(next) => onChangeText(next.replace(/\D/g, '').slice(0, 4))}
-      keyboardType="number-pad"
-      secureTextEntry
-      maxLength={4}
-      placeholder={placeholder}
-      placeholderTextColor="#A8A29A"
-      style={{
-        height: 58,
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: LINE,
-        backgroundColor: '#FFFFFF',
-        paddingHorizontal: 16,
-        color: INK,
-        fontSize: 18,
-        fontWeight: '700',
-        letterSpacing: 6,
-      }}
-    />
-  );
-}
-
-export default function TransactionPinSettingsScreen() {
+export default function AuthorizeDirectDebitMandateScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [currentPin, setCurrentPin] = React.useState('');
-  const [newPin, setNewPin] = React.useState('');
-  const [confirmPin, setConfirmPin] = React.useState('');
-  const [isSaving, setIsSaving] = React.useState(false);
+  const { uuid } = useLocalSearchParams<{ uuid?: string }>();
+  const [authorizationReference, setAuthorizationReference] = React.useState('');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  const canSave =
-    currentPin.length === 4 && newPin.length === 4 && confirmPin.length === 4 && !isSaving;
+  const canSubmit = Boolean(uuid) && authorizationReference.trim().length > 0 && !isSubmitting;
 
-  const handleSave = async () => {
-    if (!canSave) {
+  const handleSubmit = async () => {
+    if (!canSubmit || !uuid) {
       return;
     }
 
-    if (newPin !== confirmPin) {
-      setErrorMessage('New PIN entries do not match.');
-      return;
-    }
-
-    setIsSaving(true);
+    setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
-      await updateTransactionPin({ currentPin, newPin });
-      setCurrentPin('');
-      setNewPin('');
-      setConfirmPin('');
-      router.back();
+      await authorizeDirectDebitMandate(uuid, {
+        authorizationReference: authorizationReference.trim(),
+      });
+      router.replace('/(app)/(tabs)/cards' as never);
     } catch (error) {
       setErrorMessage(
-        error instanceof ApiRequestError ? error.message : 'Unable to update transaction PIN.'
+        error instanceof ApiRequestError ? error.message : 'Unable to authorize mandate.'
       );
     } finally {
-      setIsSaving(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -143,21 +101,39 @@ export default function TransactionPinSettingsScreen() {
           </View>
           <Text
             font={{ family: 'SourceSans3', weight: 'Bold' }}
-            style={{ fontSize: 28, color: INK }}>
-            Transaction PIN
+            style={{ color: INK, fontSize: 28 }}>
+            Authorize mandate
           </Text>
           <Text
             font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-            style={{ marginTop: 6, fontSize: 15, color: MUTED }}>
-            Update the 4-digit PIN used for transfers and funding.
+            style={{ marginTop: 6, color: MUTED, fontSize: 15 }}>
+            Enter the provider authorization reference to activate this mandate.
           </Text>
         </View>
 
-        <View style={{ gap: 14, marginTop: 28 }}>
-          <PinField value={currentPin} onChangeText={setCurrentPin} placeholder="Current PIN" />
-          <PinField value={newPin} onChangeText={setNewPin} placeholder="New PIN" />
-          <PinField value={confirmPin} onChangeText={setConfirmPin} placeholder="Confirm new PIN" />
-        </View>
+        <TextInput
+          value={authorizationReference}
+          onChangeText={(value) => {
+            setAuthorizationReference(value);
+            setErrorMessage(null);
+          }}
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="provider-authorization-reference"
+          placeholderTextColor="#A8A29A"
+          style={{
+            marginTop: 28,
+            height: 58,
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: LINE,
+            backgroundColor: '#FFFFFF',
+            paddingHorizontal: 16,
+            color: INK,
+            fontSize: 17,
+            fontWeight: '700',
+          }}
+        />
 
         {errorMessage ? (
           <Text
@@ -168,23 +144,23 @@ export default function TransactionPinSettingsScreen() {
         ) : null}
 
         <Pressable
-          disabled={!canSave}
-          onPress={handleSave}
+          disabled={!canSubmit}
+          onPress={handleSubmit}
           style={{
             marginTop: 28,
             height: 56,
             borderRadius: 28,
-            backgroundColor: canSave ? ORANGE : '#E5E7DA',
+            backgroundColor: canSubmit ? ORANGE : '#E5E7DA',
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-          {isSaving ? (
+          {isSubmitting ? (
             <ActivityIndicator color={INK} />
           ) : (
             <Text
               font={{ family: 'SourceSans3', weight: 'Bold' }}
               style={{ color: INK, fontSize: 16 }}>
-              Update PIN
+              Authorize
             </Text>
           )}
         </Pressable>

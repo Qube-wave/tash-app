@@ -1,101 +1,609 @@
-import { BankCard } from '@/components/modules/dashboard/bank-card';
+import {
+  ApiRequestError,
+  deleteCard,
+  disableCard,
+  listCards,
+  listDirectDebitMandates,
+  revokeDirectDebitMandate,
+  setDefaultCard,
+  type Card,
+  type DirectDebitMandate,
+} from '@/apis';
 import { Text } from '@/components/ui/text';
-import { useColors } from '@/lib/use-colors';
-import * as Haptics from 'expo-haptics';
+import { useFocusEffect, useRouter } from 'expo-router';
+import {
+  BadgeCheck,
+  Building2,
+  CreditCard,
+  Landmark,
+  Plus,
+  ShieldCheck,
+  Trash2,
+} from 'lucide-react-native';
 import * as React from 'react';
-import { Image, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const CARDS = [
-  { name: 'Timileyin Oyelekan', from: '#C75A3A', to: '#7E2E17' },
-  { name: 'Timileyin Oyelekan', from: '#3A3A44', to: '#111114' },
-  { name: 'Timileyin Oyelekan', from: '#2E7D5B', to: '#12402C' },
-];
+const BG = '#FAFAF1';
+const INK = '#151713';
+const MUTED = '#6F746A';
+const ORANGE = '#FF6A12';
+const BLACK = '#050505';
+const SOFT = '#EFF0E6';
+const LINE = '#DFE1D4';
+const GREEN = '#168A48';
+const DANGER = '#B42318';
 
-export default function CardsScreen() {
-  const insets = useSafeAreaInsets();
-  const colors = useColors();
-  const { width } = useWindowDimensions();
+function formatCurrency(value: number, currency = 'NGN') {
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
-  const cardWidth = Math.min(width * 0.6, 250);
-  const gap = 40;
-  const sidePad = (width - cardWidth) / 2;
+function titleCase(value: string) {
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function getStatusColor(status: string) {
+  if (status === 'active' || status === 'successful') {
+    return GREEN;
+  }
+
+  if (
+    status === 'failed' ||
+    status === 'expired' ||
+    status === 'revoked' ||
+    status === 'disabled'
+  ) {
+    return DANGER;
+  }
+
+  return ORANGE;
+}
+
+function EmptyState({
+  title,
+  actionLabel,
+  onPress,
+}: {
+  title: string;
+  actionLabel: string;
+  onPress: () => void;
+}) {
+  return (
+    <View
+      style={{
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: LINE,
+        backgroundColor: '#FFFFFF',
+        padding: 18,
+        alignItems: 'center',
+      }}>
+      <Text font={{ family: 'SourceSans3', weight: 'Bold' }} style={{ color: INK, fontSize: 17 }}>
+        {title}
+      </Text>
+      <Pressable
+        onPress={onPress}
+        style={{
+          marginTop: 14,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: ORANGE,
+          paddingHorizontal: 18,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+        <Text font={{ family: 'SourceSans3', weight: 'Bold' }} style={{ color: INK, fontSize: 14 }}>
+          {actionLabel}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function SavedCard({
+  card,
+  busy,
+  onSetDefault,
+  onDisable,
+  onDelete,
+}: {
+  card: Card;
+  busy: boolean;
+  onSetDefault: () => void;
+  onDisable: () => void;
+  onDelete: () => void;
+}) {
+  const statusColor = getStatusColor(card.status);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ paddingTop: insets.top + 8, flex: 1 }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: 22,
-          }}>
-          <Text
-            font={{ family: 'PlayfairDisplay', weight: 'Bold' }}
-            style={{ fontSize: 26, color: colors.heading, letterSpacing: -0.3 }}>
-            Cards
-          </Text>
-          <Image
-            source={{ uri: 'https://i.pravatar.cc/100?img=68' }}
-            style={{ width: 38, height: 38, borderRadius: 19 }}
-          />
-        </View>
-
-        <View style={{ flex: 1, justifyContent: 'center' }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={cardWidth + gap}
-            decelerationRate="fast"
-            contentContainerStyle={{ paddingHorizontal: sidePad, gap, alignItems: 'center' }}>
-            {CARDS.map((c, i) => (
-              <BankCard key={i} width={cardWidth} name={c.name} from={c.from} to={c.to} />
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={{ paddingHorizontal: 30, paddingBottom: insets.bottom + 16 }}>
-          <Text style={{ textAlign: 'center', fontSize: 21, lineHeight: 30, color: colors.heading }}>
-            <Text font={{ family: 'PlayfairDisplay' }} style={{ fontSize: 21, color: colors.heading }}>
-              A safe, secure way to{' '}
-            </Text>
-            <Text
-              font={{ family: 'PlayfairDisplay', weight: 'Bold' }}
-              style={{ fontSize: 21, color: colors.heading }}>
-              manage your money
-            </Text>
-            <Text font={{ family: 'PlayfairDisplay' }} style={{ fontSize: 21, color: colors.heading }}>
-              {' '}and{' '}
-            </Text>
-            <Text
-              font={{ family: 'PlayfairDisplay', weight: 'Bold' }}
-              style={{ fontSize: 21, color: colors.heading }}>
-              spend
-            </Text>
-            <Text font={{ family: 'PlayfairDisplay' }} style={{ fontSize: 21, color: colors.heading }}>
-              {' '}without limits
-            </Text>
-          </Text>
-
-          <Pressable
-            onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+    <View
+      style={{
+        borderRadius: 22,
+        backgroundColor: BLACK,
+        padding: 18,
+        marginBottom: 14,
+      }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View
             style={{
-              marginTop: 26,
-              height: 56,
-              borderRadius: 2,
-              backgroundColor: colors.button,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: ORANGE,
               alignItems: 'center',
               justifyContent: 'center',
             }}>
+            <CreditCard color={INK} size={21} />
+          </View>
+          <View>
+            <Text
+              font={{ family: 'SourceSans3', weight: 'Bold' }}
+              style={{ color: '#FFFFFF', fontSize: 17 }}>
+              {titleCase(card.brand)} •••• {card.lastFourDigits}
+            </Text>
             <Text
               font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-              style={{ fontSize: 17, color: colors.buttonText }}>
-              Link Card
+              style={{ marginTop: 1, color: '#D7D7D0', fontSize: 13 }}>
+              Expires {card.expiryMonth}/{card.expiryYear}
+            </Text>
+          </View>
+        </View>
+        {card.isDefault ? <BadgeCheck color={ORANGE} size={23} /> : null}
+      </View>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 18, gap: 8 }}>
+        <View
+          style={{
+            height: 30,
+            borderRadius: 15,
+            backgroundColor: '#242424',
+            paddingHorizontal: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Text
+            font={{ family: 'SourceSans3', weight: 'Bold' }}
+            style={{ color: statusColor, fontSize: 12 }}>
+            {titleCase(card.status)}
+          </Text>
+        </View>
+        <View
+          style={{
+            height: 30,
+            borderRadius: 15,
+            backgroundColor: '#242424',
+            paddingHorizontal: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Text
+            font={{ family: 'SourceSans3', weight: 'Bold' }}
+            style={{ color: '#FFFFFF', fontSize: 12 }}>
+            {card.currency}
+          </Text>
+        </View>
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+        {!card.isDefault && card.status === 'active' ? (
+          <Pressable
+            disabled={busy}
+            onPress={onSetDefault}
+            style={{
+              flex: 1,
+              height: 42,
+              borderRadius: 21,
+              backgroundColor: '#FFFFFF',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: busy ? 0.6 : 1,
+            }}>
+            <Text
+              font={{ family: 'SourceSans3', weight: 'Bold' }}
+              style={{ color: INK, fontSize: 13 }}>
+              Set default
+            </Text>
+          </Pressable>
+        ) : null}
+        {card.status === 'active' ? (
+          <Pressable
+            disabled={busy}
+            onPress={onDisable}
+            style={{
+              flex: 1,
+              height: 42,
+              borderRadius: 21,
+              backgroundColor: '#242424',
+              borderWidth: 1,
+              borderColor: '#3A3A3A',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: busy ? 0.6 : 1,
+            }}>
+            <Text
+              font={{ family: 'SourceSans3', weight: 'Bold' }}
+              style={{ color: '#FFFFFF', fontSize: 13 }}>
+              Disable
+            </Text>
+          </Pressable>
+        ) : null}
+        <Pressable
+          disabled={busy}
+          onPress={onDelete}
+          style={{
+            width: 46,
+            height: 42,
+            borderRadius: 21,
+            backgroundColor: '#331B18',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: busy ? 0.6 : 1,
+          }}>
+          {busy ? <ActivityIndicator color={DANGER} /> : <Trash2 color={DANGER} size={18} />}
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function MandateRow({
+  mandate,
+  busy,
+  onAuthorize,
+  onRevoke,
+}: {
+  mandate: DirectDebitMandate;
+  busy: boolean;
+  onAuthorize: () => void;
+  onRevoke: () => void;
+}) {
+  const statusColor = getStatusColor(mandate.status);
+
+  return (
+    <View
+      style={{
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: LINE,
+        backgroundColor: '#FFFFFF',
+        padding: 16,
+        marginBottom: 12,
+      }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 21,
+            backgroundColor: SOFT,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: 12,
+          }}>
+          <Landmark color={INK} size={21} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text
+            font={{ family: 'SourceSans3', weight: 'Bold' }}
+            style={{ color: INK, fontSize: 16 }}>
+            {mandate.bankName}
+          </Text>
+          <Text
+            font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+            style={{ marginTop: 1, color: MUTED, fontSize: 13 }}>
+            {mandate.accountName} •••• {mandate.accountNumberLastFour}
+          </Text>
+        </View>
+        <Text
+          font={{ family: 'SourceSans3', weight: 'Bold' }}
+          style={{ color: statusColor, fontSize: 12 }}>
+          {titleCase(mandate.status)}
+        </Text>
+      </View>
+
+      <View style={{ marginTop: 14 }}>
+        <Text
+          font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+          style={{ color: MUTED, fontSize: 13 }}>
+          Maximum amount
+        </Text>
+        <Text font={{ family: 'SourceSans3', weight: 'Bold' }} style={{ color: INK, fontSize: 19 }}>
+          {formatCurrency(mandate.maximumAmount, mandate.currency)}
+        </Text>
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+        {mandate.status === 'requires_authorization' ? (
+          <Pressable
+            disabled={busy}
+            onPress={onAuthorize}
+            style={{
+              flex: 1,
+              height: 42,
+              borderRadius: 21,
+              backgroundColor: ORANGE,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: busy ? 0.6 : 1,
+            }}>
+            <Text
+              font={{ family: 'SourceSans3', weight: 'Bold' }}
+              style={{ color: INK, fontSize: 13 }}>
+              Authorize
+            </Text>
+          </Pressable>
+        ) : null}
+        {mandate.status !== 'revoked' && mandate.status !== 'expired' ? (
+          <Pressable
+            disabled={busy}
+            onPress={onRevoke}
+            style={{
+              flex: 1,
+              height: 42,
+              borderRadius: 21,
+              borderWidth: 1,
+              borderColor: '#FECACA',
+              backgroundColor: '#FFF1F0',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: busy ? 0.6 : 1,
+            }}>
+            <Text
+              font={{ family: 'SourceSans3', weight: 'Bold' }}
+              style={{ color: DANGER, fontSize: 13 }}>
+              Revoke
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+export default function CardsScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const [cards, setCards] = React.useState<Card[]>([]);
+  const [mandates, setMandates] = React.useState<DirectDebitMandate[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [busyKey, setBusyKey] = React.useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+
+  const loadPaymentMethods = React.useCallback(async (signal: AbortSignal) => {
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const [savedCards, directDebitMandates] = await Promise.all([
+        listCards({ signal }),
+        listDirectDebitMandates({ signal }),
+      ]);
+
+      setCards(savedCards);
+      setMandates(directDebitMandates);
+    } catch (error) {
+      if (signal.aborted) {
+        return;
+      }
+
+      setErrorMessage(
+        error instanceof ApiRequestError
+          ? error.message
+          : 'Unable to load cards and direct debit mandates.'
+      );
+    } finally {
+      if (!signal.aborted) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const controller = new AbortController();
+      loadPaymentMethods(controller.signal);
+
+      return () => controller.abort();
+    }, [loadPaymentMethods])
+  );
+
+  const refresh = React.useCallback(async () => {
+    const controller = new AbortController();
+    await loadPaymentMethods(controller.signal);
+  }, [loadPaymentMethods]);
+
+  const runCardAction = async (key: string, action: () => Promise<unknown>) => {
+    setBusyKey(key);
+    setErrorMessage(null);
+
+    try {
+      await action();
+      await refresh();
+    } catch (error) {
+      setErrorMessage(error instanceof ApiRequestError ? error.message : 'Card action failed.');
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const runMandateAction = async (key: string, action: () => Promise<unknown>) => {
+    setBusyKey(key);
+    setErrorMessage(null);
+
+    try {
+      await action();
+      await refresh();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof ApiRequestError ? error.message : 'Direct debit action failed.'
+      );
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: BG }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingTop: insets.top + 18,
+          paddingHorizontal: 24,
+          paddingBottom: insets.bottom + 110,
+        }}>
+        <View
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View>
+            <Text
+              font={{ family: 'SourceSans3', weight: 'Bold' }}
+              style={{ color: INK, fontSize: 26 }}>
+              Cards
+            </Text>
+            <Text
+              font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+              style={{ marginTop: 1, color: MUTED, fontSize: 14 }}>
+              Cards and direct debit
+            </Text>
+          </View>
+          {isLoading ? <ActivityIndicator color={ORANGE} /> : null}
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 24 }}>
+          <Pressable
+            onPress={() => router.push('/cards/add' as never)}
+            style={{
+              flex: 1,
+              height: 52,
+              borderRadius: 26,
+              backgroundColor: ORANGE,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            }}>
+            <Plus color={INK} size={20} />
+            <Text
+              font={{ family: 'SourceSans3', weight: 'Bold' }}
+              style={{ color: INK, fontSize: 15 }}>
+              Add card
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/direct-debit/new' as never)}
+            style={{
+              flex: 1,
+              height: 52,
+              borderRadius: 26,
+              backgroundColor: BLACK,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            }}>
+            <Building2 color="#FFFFFF" size={19} />
+            <Text
+              font={{ family: 'SourceSans3', weight: 'Bold' }}
+              style={{ color: '#FFFFFF', fontSize: 15 }}>
+              Add debit
             </Text>
           </Pressable>
         </View>
-      </View>
+
+        {errorMessage ? (
+          <View
+            style={{
+              marginTop: 18,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: '#FECACA',
+              backgroundColor: '#FFF1F0',
+              padding: 14,
+            }}>
+            <Text
+              font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+              style={{ color: DANGER, fontSize: 14 }}>
+              {errorMessage}
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={{ marginTop: 28 }}>
+          <Text
+            font={{ family: 'SourceSans3', weight: 'Bold' }}
+            style={{ color: INK, fontSize: 20 }}>
+            Saved cards
+          </Text>
+          <View style={{ marginTop: 12 }}>
+            {cards.length === 0 && !isLoading ? (
+              <EmptyState
+                title="No saved cards yet"
+                actionLabel="Add card"
+                onPress={() => router.push('/cards/add' as never)}
+              />
+            ) : (
+              cards.map((card) => (
+                <SavedCard
+                  key={card.uuid}
+                  card={card}
+                  busy={busyKey === card.uuid}
+                  onSetDefault={() => runCardAction(card.uuid, () => setDefaultCard(card.uuid))}
+                  onDisable={() => runCardAction(card.uuid, () => disableCard(card.uuid))}
+                  onDelete={() => runCardAction(card.uuid, () => deleteCard(card.uuid))}
+                />
+              ))
+            )}
+          </View>
+        </View>
+
+        <View style={{ marginTop: 26 }}>
+          <View
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text
+              font={{ family: 'SourceSans3', weight: 'Bold' }}
+              style={{ color: INK, fontSize: 20 }}>
+              Direct debit
+            </Text>
+            <ShieldCheck color={MUTED} size={20} />
+          </View>
+          <View style={{ marginTop: 12 }}>
+            {mandates.length === 0 && !isLoading ? (
+              <EmptyState
+                title="No mandates yet"
+                actionLabel="Add direct debit"
+                onPress={() => router.push('/direct-debit/new' as never)}
+              />
+            ) : (
+              mandates.map((mandate) => (
+                <MandateRow
+                  key={mandate.uuid}
+                  mandate={mandate}
+                  busy={busyKey === mandate.uuid}
+                  onAuthorize={() =>
+                    router.push({
+                      pathname: '/direct-debit/authorize' as never,
+                      params: { uuid: mandate.uuid },
+                    })
+                  }
+                  onRevoke={() =>
+                    runMandateAction(mandate.uuid, () =>
+                      revokeDirectDebitMandate(mandate.uuid, { reason: 'User disabled mandate' })
+                    )
+                  }
+                />
+              ))
+            )}
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 }
