@@ -25,6 +25,7 @@ type SessionContextValue = {
   signInWithAuthResponse: (authResponse: AuthResponse) => Promise<void>;
   unlockWithPin: (pin: string) => Promise<void>;
   refreshAccessToken: () => Promise<string | null>;
+  updateUser: (updatedUser: PublicUserProfile) => void;
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
 };
@@ -168,6 +169,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [applyAuthResponse, clearSession, refreshToken]);
 
+  const updateUser = useCallback((updatedUser: PublicUserProfile) => {
+    setUser(updatedUser);
+  }, []);
+
   useEffect(() => {
     apiClient.setRefreshAccessTokenProvider(refreshAccessToken);
 
@@ -185,6 +190,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       signInWithAuthResponse,
       unlockWithPin,
       refreshAccessToken,
+      updateUser,
       logout,
       logoutAll,
     }),
@@ -198,6 +204,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       signInWithAuthResponse,
       status,
       unlockWithPin,
+      updateUser,
       user,
     ]
   );

@@ -96,6 +96,7 @@ export default function NewDirectDebitMandateScreen() {
   ].filter(Boolean) as string[];
   const canStartSetup = missingContactDetails.length === 0;
   const missingContactLabel = missingContactDetails.join(' and ');
+  const missingEmail = !hasEmail;
 
   const loadBanks = React.useCallback(async (signal?: AbortSignal) => {
     setIsLoadingBanks(true);
@@ -308,7 +309,14 @@ export default function NewDirectDebitMandateScreen() {
               Add your {missingContactLabel} to your profile before setting up direct debit.
             </Text>
             <Pressable
-              onPress={() => router.push('/settings/account-details' as never)}
+              onPress={() =>
+                missingEmail
+                  ? router.push({
+                      pathname: '/settings/email' as never,
+                      params: { next: '/direct-debit/new' },
+                    })
+                  : router.push('/settings/account-details' as never)
+              }
               style={{
                 alignSelf: 'flex-start',
                 marginTop: 14,
@@ -322,7 +330,7 @@ export default function NewDirectDebitMandateScreen() {
               <Text
                 font={{ family: 'SourceSans3', weight: 'Bold' }}
                 style={{ color: '#FFFFFF', fontSize: 14 }}>
-                View profile
+                {missingEmail ? 'Add email' : 'View profile'}
               </Text>
             </Pressable>
           </View>

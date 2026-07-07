@@ -391,9 +391,17 @@ export default function CardsScreen() {
   const canStartPaymentSetup = missingPaymentContactDetails.length === 0;
   const missingPaymentContactLabel = missingPaymentContactDetails.join(' and ');
 
-  const requirePaymentContactDetails = (action: string) => {
+  const requirePaymentContactDetails = (action: string, next: string) => {
     if (canStartPaymentSetup) {
       return true;
+    }
+
+    if (!user?.email) {
+      router.push({
+        pathname: '/settings/email' as never,
+        params: { next },
+      });
+      return false;
     }
 
     setErrorMessage(`Add your ${missingPaymentContactLabel} to your profile before ${action}.`);
@@ -401,7 +409,7 @@ export default function CardsScreen() {
   };
 
   const startCardSetup = () => {
-    if (!requirePaymentContactDetails('adding a card')) {
+    if (!requirePaymentContactDetails('adding a card', '/cards/add')) {
       return;
     }
 
@@ -409,7 +417,7 @@ export default function CardsScreen() {
   };
 
   const startDirectDebitSetup = () => {
-    if (!requirePaymentContactDetails('setting up direct debit')) {
+    if (!requirePaymentContactDetails('setting up direct debit', '/direct-debit/new')) {
       return;
     }
 

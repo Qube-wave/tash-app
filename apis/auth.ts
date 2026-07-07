@@ -3,6 +3,7 @@ import type {
   AuthResponse,
   MessageResponse,
   OnboardingStepResponse,
+  PublicUserProfile,
   RequestOptions,
   VerificationResponse,
 } from './types';
@@ -94,6 +95,32 @@ export function completeLoginPhoneVerification(
     skipAuthRefresh: true,
     method: 'POST',
     body: payload,
+  });
+}
+
+export function sendCurrentUserEmailVerification(
+  payload: { email: string },
+  options?: RequestOptions,
+  api?: ApiClient
+): Promise<MessageResponse> {
+  return client(api).request('/api/v1/auth/me/email/send-verification', {
+    method: 'POST',
+    body: payload,
+    accessToken: options?.accessToken,
+    signal: options?.signal,
+  });
+}
+
+export function completeCurrentUserEmailVerification(
+  payload: { email: string; token: string },
+  options?: RequestOptions,
+  api?: ApiClient
+): Promise<PublicUserProfile> {
+  return client(api).request('/api/v1/auth/me/email/complete-verification', {
+    method: 'POST',
+    body: payload,
+    accessToken: options?.accessToken,
+    signal: options?.signal,
   });
 }
 

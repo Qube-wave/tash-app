@@ -95,6 +95,7 @@ export default function AddCardScreen() {
   ].filter(Boolean) as string[];
   const canStartSetup = missingContactDetails.length === 0;
   const missingContactLabel = missingContactDetails.join(' and ');
+  const missingEmail = !hasEmail;
   const canSubmit =
     canStartSetup &&
     sanitizedCardNumber.length >= 12 &&
@@ -229,7 +230,14 @@ export default function AddCardScreen() {
               Add your {missingContactLabel} to your profile before adding a card.
             </Text>
             <Pressable
-              onPress={() => router.push('/settings/account-details' as never)}
+              onPress={() =>
+                missingEmail
+                  ? router.push({
+                      pathname: '/settings/email' as never,
+                      params: { next: '/cards/add' },
+                    })
+                  : router.push('/settings/account-details' as never)
+              }
               style={{
                 alignSelf: 'flex-start',
                 marginTop: 14,
@@ -243,7 +251,7 @@ export default function AddCardScreen() {
               <Text
                 font={{ family: 'SourceSans3', weight: 'Bold' }}
                 style={{ color: '#FFFFFF', fontSize: 14 }}>
-                View profile
+                {missingEmail ? 'Add email' : 'View profile'}
               </Text>
             </Pressable>
           </View>

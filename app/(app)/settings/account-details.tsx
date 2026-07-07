@@ -261,6 +261,23 @@ export default function AccountDetailsScreen() {
           />
           <DetailRow icon={ShieldCheck} label="Account status" value={user?.status ?? 'Unknown'} />
         </Section>
+
+        <Pressable
+          onPress={() => router.push('/settings/email' as never)}
+          style={{
+            marginTop: 18,
+            height: 52,
+            borderRadius: 26,
+            backgroundColor: ORANGE,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Text
+            font={{ family: 'SourceSans3', weight: 'Bold' }}
+            style={{ color: INK, fontSize: 15 }}>
+            {user?.email ? 'Update email' : 'Add email'}
+          </Text>
+        </Pressable>
       </ScrollView>
     </View>
   );
