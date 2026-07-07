@@ -1,11 +1,13 @@
-import { AuthScreenLayout } from '@/components/modules/auth/AuthScreenLayout';
-import { OtpInput } from '@/components/modules/auth/OtpInput';
+import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
+import { OtpInput } from '@/components/modules/auth/otp-input';
 import { Text } from '@/components/ui/text';
+import { useColors } from '@/lib/use-colors';
 import { Stack, useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
 export default function VerifyEmailScreen() {
   const router = useRouter();
+  const colors = useColors();
 
   return (
     <>
@@ -20,7 +22,7 @@ export default function VerifyEmailScreen() {
           <Pressable style={{ alignItems: 'center' }}>
             <Text
               font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-              style={{ fontSize: 15, color: '#1C1C1E', textDecorationLine: 'underline' }}
+              style={{ fontSize: 15, color: colors.accent }}
             >
               Resend code
             </Text>

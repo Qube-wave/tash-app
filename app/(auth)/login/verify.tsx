@@ -1,5 +1,5 @@
-import { AuthScreenLayout } from '@/components/modules/auth/AuthScreenLayout';
-import { OtpInput } from '@/components/modules/auth/OtpInput';
+import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
+import { OtpInput } from '@/components/modules/auth/otp-input';
 import { Text } from '@/components/ui/text';
 import { Stack, useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';

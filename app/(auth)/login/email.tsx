@@ -1,5 +1,5 @@
-import { AuthScreenLayout } from '@/components/modules/auth/AuthScreenLayout';
-import { AuthTextInput } from '@/components/modules/auth/AuthTextInput';
+import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
+import { AuthTextInput } from '@/components/modules/auth/auth-text-input';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 

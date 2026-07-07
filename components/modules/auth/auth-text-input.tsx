@@ -1,21 +1,23 @@
 import * as React from 'react';
 import { TextInput, type TextInputProps } from 'react-native';
 import { resolveFontFamily } from '@/constants/fonts';
+import { useColors } from '@/lib/use-colors';
 
 export function AuthTextInput(props: TextInputProps) {
+  const colors = useColors();
   return (
     <TextInput
-      placeholderTextColor="#A0A0A0"
-      selectionColor="#1C1C1E"
+      placeholderTextColor={colors.placeholder}
+      selectionColor={colors.accent}
       {...props}
       style={[
         {
-          height: 54,
-          backgroundColor: '#F0EEEA',
-          borderRadius: 16,
+          height: 56,
+          backgroundColor: colors.surface,
+          borderRadius: 8,
           paddingHorizontal: 18,
           fontSize: 16,
-          color: '#1C1C1E',
+          color: colors.heading,
           fontFamily: resolveFontFamily('SourceSans3', 'Regular'),
         },
         props.style,

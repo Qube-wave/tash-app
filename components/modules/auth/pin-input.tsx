@@ -1,4 +1,5 @@
 import { Text } from '@/components/ui/text';
+import { useColors } from '@/lib/use-colors';
 import * as Haptics from 'expo-haptics';
 import * as React from 'react';
 import { useState } from 'react';
@@ -25,6 +26,7 @@ const KEYS = [
 ];
 
 export function PinInput({ length = 4, onComplete }: Props) {
+  const colors = useColors();
   const [pin, setPin] = useState('');
   const dotScale = Array.from({ length }, () => useSharedValue(1));
 
@@ -54,8 +56,8 @@ export function PinInput({ length = 4, onComplete }: Props) {
   };
 
   return (
-    <View style={{ flex: 1, justifyContent: 'space-between' }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18, marginTop: 40 }}>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18 }}>
         {Array.from({ length }).map((_, i) => {
           const style = useAnimatedStyle(() => ({
             transform: [{ scale: dotScale[i].value }],
@@ -69,7 +71,7 @@ export function PinInput({ length = 4, onComplete }: Props) {
                   width: 18,
                   height: 18,
                   borderRadius: 9,
-                  backgroundColor: i < pin.length ? '#1C1C1E' : '#E8E5E0',
+                  backgroundColor: i < pin.length ? colors.accent : colors.surfaceActive,
                 },
                 style,
               ]}
@@ -78,7 +80,7 @@ export function PinInput({ length = 4, onComplete }: Props) {
         })}
       </View>
 
-      <View style={{ gap: 14, paddingBottom: 20 }}>
+      <View style={{ gap: 14, marginTop: 48 }}>
         {KEYS.map((row, rowIndex) => (
           <View key={rowIndex} style={{ flexDirection: 'row', justifyContent: 'center', gap: 22 }}>
             {row.map((key, keyIndex) => {
@@ -96,19 +98,18 @@ export function PinInput({ length = 4, onComplete }: Props) {
                       height: 72,
                       alignItems: 'center',
                       justifyContent: 'center',
-                    }}
-                  >
+                    }}>
                     <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
                       <Path
                         d="M21 4H8l-7 8 7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z"
-                        stroke="#1C1C1E"
+                        stroke={colors.heading}
                         strokeWidth={1.5}
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
                       <Path
                         d="M18 9l-6 6M12 9l6 6"
-                        stroke="#1C1C1E"
+                        stroke={colors.heading}
                         strokeWidth={1.5}
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -126,15 +127,14 @@ export function PinInput({ length = 4, onComplete }: Props) {
                     width: 72,
                     height: 72,
                     borderRadius: 36,
-                    backgroundColor: pressed ? '#E4E1DC' : '#F0EEEA',
+                    backgroundColor: pressed ? colors.surfaceActive : colors.surface,
                     alignItems: 'center',
+                    flex: 1,
                     justifyContent: 'center',
-                  })}
-                >
+                  })}>
                   <Text
                     font={{ family: 'SourceSans3', weight: 'Medium' }}
-                    style={{ fontSize: 28, color: '#1C1C1E' }}
-                  >
+                    style={{ fontSize: 18, color: colors.heading }}>
                     {key}
                   </Text>
                 </Pressable>

@@ -1,4 +1,5 @@
 import { Text } from '@/components/ui/text';
+import { useColors } from '@/lib/use-colors';
 import { useRouter } from 'expo-router';
 import * as React from 'react';
 import { useEffect } from 'react';
@@ -23,6 +24,7 @@ type Props = {
   continueLabel?: string;
   continueDisabled?: boolean;
   showContinue?: boolean;
+  footer?: React.ReactNode;
   children: React.ReactNode;
 };
 
@@ -34,10 +36,12 @@ export function AuthScreenLayout({
   continueLabel = 'Continue',
   continueDisabled = false,
   showContinue = true,
+  footer,
   children,
 }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colors = useColors();
 
   const buttonScale = useSharedValue(1);
   const buttonOpacity = useSharedValue(continueDisabled ? 0.4 : 1);
@@ -45,7 +49,6 @@ export function AuthScreenLayout({
   useEffect(() => {
     buttonOpacity.value = withTiming(continueDisabled ? 0.4 : 1, { duration: 200 });
   }, [continueDisabled]);
-
 
   const btnStyle = useAnimatedStyle(() => ({
     transform: [{ scale: buttonScale.value }],
@@ -64,15 +67,13 @@ export function AuthScreenLayout({
     <View
       style={{
         flex: 1,
-        backgroundColor: '#F5F2ED',
+        backgroundColor: colors.bg,
         paddingTop: insets.top,
-        paddingBottom: insets.bottom + 8,
-      }}
-    >
+        paddingBottom: insets.bottom + 16,
+      }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={{ flex: 1, paddingHorizontal: 24 }}>
           <Pressable
             onPress={handleBack}
@@ -84,12 +85,11 @@ export function AuthScreenLayout({
               justifyContent: 'center',
               marginLeft: -8,
               marginTop: 4,
-            }}
-          >
+            }}>
             <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M15 18l-6-6 6-6"
-                stroke="#1C1C1E"
+                stroke={colors.heading}
                 strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -100,8 +100,7 @@ export function AuthScreenLayout({
           <View style={{ marginTop: 20 }}>
             <Text
               font={{ family: 'PlayfairDisplay', weight: 'Bold' }}
-              style={{ fontSize: 28, lineHeight: 34, color: '#1C1C1E', letterSpacing: -0.3 }}
-            >
+              style={{ fontSize: 30, lineHeight: 38, color: colors.heading, letterSpacing: -0.4 }}>
               {heading}
             </Text>
           </View>
@@ -109,15 +108,12 @@ export function AuthScreenLayout({
           <View style={{ marginTop: 10 }}>
             <Text
               font={{ family: 'SourceSans3' }}
-              style={{ fontSize: 15, lineHeight: 21, color: '#7A7A7A' }}
-            >
+              style={{ fontSize: 15, lineHeight: 22, color: colors.subtitle }}>
               {subtitle}
             </Text>
           </View>
 
-          <View style={{ flex: 1, marginTop: 32 }}>
-            {children}
-          </View>
+          <View style={{ flex: 1, marginTop: 32 }}>{children}</View>
         </View>
 
         {showContinue && (
@@ -139,24 +135,24 @@ export function AuthScreenLayout({
               }}
               style={[
                 {
-                  height: 54,
-                  borderRadius: 27,
-                  backgroundColor: '#1C1C1E',
+                  height: 56,
+                  borderRadius: 2,
+                  backgroundColor: colors.button,
                   alignItems: 'center',
                   justifyContent: 'center',
                 },
                 btnStyle,
-              ]}
-            >
+              ]}>
               <Text
                 font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-                style={{ fontSize: 16, color: '#FFFFFF' }}
-              >
+                style={{ fontSize: 17, color: colors.buttonText }}>
                 {continueLabel}
               </Text>
             </AnimatedPressable>
           </View>
         )}
+
+        {footer && <View style={{ paddingHorizontal: 24, paddingTop: 4 }}>{footer}</View>}
       </KeyboardAvoidingView>
     </View>
   );

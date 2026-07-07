@@ -1,5 +1,5 @@
-import { AuthScreenLayout } from '@/components/modules/auth/AuthScreenLayout';
-import { PinInput } from '@/components/modules/auth/PinInput';
+import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
+import { PinInput } from '@/components/modules/auth/pin-input';
 import { Stack, useRouter } from 'expo-router';
 
 export default function PinSetupScreen() {

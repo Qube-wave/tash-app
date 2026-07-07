@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { TextInput, View } from 'react-native';
 import { resolveFontFamily } from '@/constants/fonts';
+import { useColors } from '@/lib/use-colors';
 
 type Props = {
   length?: number;
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export function OtpInput({ length = 6, onComplete }: Props) {
+  const colors = useColors();
   const [code, setCode] = useState<string[]>(new Array(length).fill(''));
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
@@ -54,15 +56,15 @@ export function OtpInput({ length = 6, onComplete }: Props) {
           onKeyPress={(e) => handleKeyPress(e, index)}
           keyboardType="number-pad"
           maxLength={1}
-          selectionColor="#1C1C1E"
+          selectionColor={colors.accent}
           style={{
             width: 48,
             height: 56,
-            backgroundColor: digit ? '#E8E5E0' : '#F0EEEA',
-            borderRadius: 14,
+            backgroundColor: digit ? colors.surfaceActive : colors.surface,
+            borderRadius: 8,
             textAlign: 'center',
             fontSize: 22,
-            color: '#1C1C1E',
+            color: colors.heading,
             fontFamily: resolveFontFamily('SourceSans3', 'SemiBold'),
           }}
         />
