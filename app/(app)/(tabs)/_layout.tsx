@@ -1,66 +1,62 @@
+import { resolveFontFamily } from '@/constants/fonts';
+import { useColors } from '@/lib/use-colors';
 import { Tabs } from 'expo-router';
-import { CreditCard, Home, Send, User } from 'lucide-react-native';
-import { View } from 'react-native';
+import { CreditCard, Home, User } from 'lucide-react-native';
+import { type ColorValue, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const ICONS = {
+  index: Home,
+  cards: CreditCard,
+  profile: User,
+} as const;
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
+
+  const renderIcon =
+    (name: keyof typeof ICONS) =>
+    ({ color, focused }: { color: ColorValue; focused: boolean }) => {
+      const Icon = ICONS[name];
+      return (
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          <Icon color={color} size={23} strokeWidth={focused ? 2.5 : 2} />
+        </View>
+      );
+    };
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
         tabBarStyle: {
-          backgroundColor: '#FFF6EE',
-          borderTopColor: '#E8D6C8',
-          height: 60 + (insets.bottom > 0 ? insets.bottom - 10 : 0),
-          paddingBottom: insets.bottom > 0 ? insets.bottom - 10 : 10,
-          paddingTop: 10,
+          backgroundColor: colors.bg,
+          borderTopColor: colors.border,
+          height: 62 + (insets.bottom > 0 ? insets.bottom - 6 : 0),
+          paddingBottom: insets.bottom > 0 ? insets.bottom - 6 : 8,
+          paddingTop: 8,
         },
-        tabBarActiveTintColor: '#C75A3A',
-        tabBarInactiveTintColor: '#A94E2C',
-      }}
-    >
+        tabBarLabelStyle: {
+          fontFamily: resolveFontFamily('SourceSans3', 'Medium'),
+          fontSize: 11,
+          marginTop: 2,
+        },
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.placeholder,
+      }}>
       <Tabs.Screen
         name="index"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center', justifyContent: 'center', height: '100%', width: 48 }}>
-              <Home color={color} size={24} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
+        options={{ title: 'Home', tabBarIcon: renderIcon('index') }}
       />
       <Tabs.Screen
         name="cards"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center', justifyContent: 'center', height: '100%', width: 48 }}>
-              <CreditCard color={color} size={24} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="payments"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center', justifyContent: 'center', height: '100%', width: 48 }}>
-              <Send color={color} size={24} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
+        options={{ title: 'Cards', tabBarIcon: renderIcon('cards') }}
       />
       <Tabs.Screen
         name="profile"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center', justifyContent: 'center', height: '100%', width: 48 }}>
-              <User color={color} size={24} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
+        options={{ title: 'Profile', tabBarIcon: renderIcon('profile') }}
       />
     </Tabs>
   );

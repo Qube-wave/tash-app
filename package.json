@@ -10,8 +10,9 @@
     "clean": "rm -rf .expo node_modules"
   },
   "dependencies": {
-    "@expo-google-fonts/onest": "^0.4.1",
     "@expo-google-fonts/playfair-display": "^0.4.2",
+    "@expo-google-fonts/source-sans-3": "^0.4.1",
+    "@lottiefiles/dotlottie-react": "^0.19.7",
     "@rn-primitives/accordion": "^1.5.2",
     "@rn-primitives/alert-dialog": "^1.5.2",
     "@rn-primitives/aspect-ratio": "^1.5.2",
@@ -36,6 +37,7 @@
     "@rn-primitives/toggle": "^1.5.2",
     "@rn-primitives/toggle-group": "^1.5.2",
     "@rn-primitives/tooltip": "^1.5.2",
+    "@shopify/flash-list": "2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "expo": "~56.0.13",
@@ -49,6 +51,7 @@
     "expo-status-bar": "~56.0.4",
     "expo-system-ui": "~56.0.5",
     "expo-updates": "~56.0.20",
+    "lottie-react-native": "^7.3.8",
     "lucide-react-native": "^1.21.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",

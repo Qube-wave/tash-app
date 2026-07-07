@@ -95,7 +95,7 @@ function Text({
   const fontStyle = {
     fontFamily: font
       ? resolveFontFamily(font.family, font.weight, font.style)
-      : resolveFontFamily('Onest'),
+      : resolveFontFamily('SourceSans3'),
   };
 
   return (

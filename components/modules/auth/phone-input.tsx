@@ -1,8 +1,8 @@
 import { Text } from '@/components/ui/text';
 import { resolveFontFamily } from '@/constants/fonts';
+import { useColors } from '@/lib/use-colors';
 import * as React from 'react';
-import { Pressable, TextInput, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { TextInput, View } from 'react-native';
 
 type Props = {
   phoneNumber: string;
@@ -17,53 +17,43 @@ export function PhoneInput({
   countryCode = '+234',
   countryFlag = '🇳🇬',
 }: Props) {
+  const colors = useColors();
   return (
     <View style={{ flexDirection: 'row', gap: 10 }}>
-      <Pressable
+      <View
         style={{
-          height: 54,
-          backgroundColor: '#E8D6C8',
-          borderRadius: 16,
-          paddingHorizontal: 14,
+          height: 56,
+          backgroundColor: colors.surface,
+          borderRadius: 8,
+          paddingHorizontal: 16,
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 6,
-        }}
-      >
+          gap: 8,
+        }}>
         <Text style={{ fontSize: 20 }}>{countryFlag}</Text>
         <Text
-          font={{ family: 'Onest', weight: 'Medium' }}
-          style={{ fontSize: 16, color: '#1F1714' }}
-        >
+          font={{ family: 'SourceSans3', weight: 'Medium' }}
+          style={{ fontSize: 16, color: colors.heading }}>
           {countryCode}
         </Text>
-        <Svg width={12} height={12} viewBox="0 0 12 12">
-          <Path
-            d="M3 4.5l3 3 3-3"
-            stroke="#A94E2C"
-            strokeWidth={1.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </Svg>
-      </Pressable>
+      </View>
 
       <TextInput
         value={phoneNumber}
         onChangeText={onChangePhoneNumber}
         placeholder="801 234 5678"
-        placeholderTextColor="#A94E2C"
+        placeholderTextColor={colors.placeholder}
         keyboardType="phone-pad"
-        selectionColor="#C75A3A"
+        selectionColor={colors.accent}
         style={{
           flex: 1,
-          height: 54,
-          backgroundColor: '#E8D6C8',
-          borderRadius: 16,
+          height: 56,
+          backgroundColor: colors.surface,
+          borderRadius: 8,
           paddingHorizontal: 18,
           fontSize: 16,
-          color: '#1F1714',
-          fontFamily: resolveFontFamily('Onest', 'Regular'),
+          color: colors.heading,
+          fontFamily: resolveFontFamily('SourceSans3', 'Regular'),
         }}
       />
     </View>

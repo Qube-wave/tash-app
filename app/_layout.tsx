@@ -9,6 +9,7 @@ import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SessionProvider } from '@/providers/session-provider';
+import { OnboardingProvider } from '@/providers/onboarding-provider';
 import { useUniwind } from 'uniwind';
 import { useEffect } from 'react';
 
@@ -37,9 +38,11 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
       <SessionProvider>
-        <StatusBar style={'dark'} />
-        <Stack screenOptions={{ headerShown: false }} />
-        <PortalHost />
+        <OnboardingProvider>
+          <StatusBar style={'dark'} />
+          <Stack screenOptions={{ headerShown: false }} />
+          <PortalHost />
+        </OnboardingProvider>
       </SessionProvider>
     </ThemeProvider>
   );

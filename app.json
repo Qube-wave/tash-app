@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "minimal",
-    "slug": "minimal",
+    "name": "Tash",
+    "slug": "tash",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
-    "scheme": "minimal",
+    "scheme": "tash",
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [
       "**/*"

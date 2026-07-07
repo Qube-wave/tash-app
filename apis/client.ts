@@ -25,14 +25,18 @@ function joinUrl(baseUrl: string, path: string) {
   return `${baseUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
 }
 
-async function parseJson(response: Response) {
+async function parseResponseBody(response: Response) {
   const text = await response.text();
 
   if (!text) {
     return null;
   }
 
-  return JSON.parse(text);
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 
 function isApiErrorEnvelope(value: unknown): value is ApiErrorEnvelope {
@@ -105,14 +109,27 @@ export class ApiClient {
       headers.Authorization = `Bearer ${accessToken}`;
     }
 
-    const response = await fetch(joinUrl(this.baseUrl, path), {
-      method: options.method ?? 'GET',
-      headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: options.signal,
-    });
+    let response: Response;
 
-    const payload = (await parseJson(response)) as ApiEnvelope<T> | unknown;
+    try {
+      response = await fetch(joinUrl(this.baseUrl, path), {
+        method: options.method ?? 'GET',
+        headers,
+        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        signal: options.signal,
+      });
+    } catch (error) {
+      throw new ApiRequestError({
+        code: 'NETWORK_ERROR',
+        message:
+          'Unable to reach the Tash API. Check that the backend is running and reachable from this device.',
+        details: error,
+        requestId: null,
+        status: 0,
+      });
+    }
+
+    const payload = (await parseResponseBody(response)) as ApiEnvelope<T> | unknown;
 
     if (isApiErrorEnvelope(payload)) {
       throw new ApiRequestError({

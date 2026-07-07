@@ -1,6 +1,6 @@
 import { ApiRequestError } from '@/apis';
-import { AuthScreenLayout } from '@/components/modules/auth/AuthScreenLayout';
-import { PinInput } from '@/components/modules/auth/PinInput';
+import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
+import { PinInput } from '@/components/modules/auth/pin-input';
 import { Text } from '@/components/ui/text';
 import { useSession } from '@/providers/session-provider';
 import { Stack, useRouter } from 'expo-router';
@@ -66,7 +66,7 @@ export default function UnlockScreen() {
         <View style={{ flex: 1 }}>
           {errorMessage ? (
             <Text
-              font={{ family: 'Onest', weight: 'Medium' }}
+              font={{ family: 'SourceSans3', weight: 'Medium' }}
               style={{ color: '#C75A3A', fontSize: 14, lineHeight: 20, textAlign: 'center' }}
             >
               {errorMessage}
@@ -74,7 +74,7 @@ export default function UnlockScreen() {
           ) : null}
           {isUnlocking ? (
             <Text
-              font={{ family: 'Onest', weight: 'Medium' }}
+              font={{ family: 'SourceSans3', weight: 'Medium' }}
               style={{ color: '#A94E2C', fontSize: 14, lineHeight: 20, textAlign: 'center' }}
             >
               Checking PIN...
