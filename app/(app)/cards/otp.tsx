@@ -107,7 +107,7 @@ export default function CardOtpScreen() {
           <Text
             font={{ family: 'SourceSans3', weight: 'SemiBold' }}
             style={{ marginTop: 6, color: MUTED, fontSize: 15 }}>
-            Enter the provider OTP to finish saving this card.
+            An OTP has been sent to the number / email attached to this card
           </Text>
         </View>
 

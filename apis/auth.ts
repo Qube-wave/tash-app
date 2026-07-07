@@ -11,9 +11,10 @@ const client = (api?: ApiClient) => api ?? apiClient;
 
 export function sendSignupEmailVerification(
   payload: { email: string },
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<MessageResponse> {
   return client(api).request('/api/v1/auth/send-email-verification', {
+    skipAuthRefresh: true,
     method: 'POST',
     body: payload,
   });
@@ -21,9 +22,10 @@ export function sendSignupEmailVerification(
 
 export function sendSignupPhoneVerification(
   payload: { phoneNumber: string },
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<MessageResponse> {
   return client(api).request('/api/v1/auth/send-phone-verification', {
+    skipAuthRefresh: true,
     method: 'POST',
     body: payload,
   });
@@ -31,9 +33,10 @@ export function sendSignupPhoneVerification(
 
 export function completeSignupEmailVerification(
   payload: { email: string; token: string },
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<VerificationResponse> {
   return client(api).request('/api/v1/auth/complete-email-verification', {
+    skipAuthRefresh: true,
     method: 'POST',
     body: payload,
   });
@@ -41,9 +44,10 @@ export function completeSignupEmailVerification(
 
 export function completeSignupPhoneVerification(
   payload: { phoneNumber: string; token: string },
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<VerificationResponse> {
   return client(api).request('/api/v1/auth/complete-phone-verification', {
+    skipAuthRefresh: true,
     method: 'POST',
     body: payload,
   });
@@ -51,9 +55,10 @@ export function completeSignupPhoneVerification(
 
 export function sendLoginEmailVerification(
   payload: { email: string },
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<MessageResponse> {
   return client(api).request('/api/v1/auth/login/email/send-verification', {
+    skipAuthRefresh: true,
     method: 'POST',
     body: payload,
   });
@@ -61,9 +66,10 @@ export function sendLoginEmailVerification(
 
 export function sendLoginPhoneVerification(
   payload: { phoneNumber: string },
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<MessageResponse> {
   return client(api).request('/api/v1/auth/login/phone/send-verification', {
+    skipAuthRefresh: true,
     method: 'POST',
     body: payload,
   });
@@ -71,9 +77,10 @@ export function sendLoginPhoneVerification(
 
 export function completeLoginEmailVerification(
   payload: { email: string; token: string },
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<AuthResponse> {
   return client(api).request('/api/v1/auth/login/email/complete-verification', {
+    skipAuthRefresh: true,
     method: 'POST',
     body: payload,
   });
@@ -81,9 +88,10 @@ export function completeLoginEmailVerification(
 
 export function completeLoginPhoneVerification(
   payload: { phoneNumber: string; token: string },
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<AuthResponse> {
   return client(api).request('/api/v1/auth/login/phone/complete-verification', {
+    skipAuthRefresh: true,
     method: 'POST',
     body: payload,
   });
@@ -96,9 +104,10 @@ export function completeOnboardingProfile(
     lastName: string;
     dateOfBirth: string;
   },
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<OnboardingStepResponse> {
   return client(api).request('/api/v1/auth/onboarding/profile', {
+    skipAuthRefresh: true,
     method: 'POST',
     body: payload,
   });
@@ -106,9 +115,10 @@ export function completeOnboardingProfile(
 
 export function claimPaymentTag(
   payload: { onboardingSessionToken: string; paymentTag: string },
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<OnboardingStepResponse> {
   return client(api).request('/api/v1/auth/onboarding/tag', {
+    skipAuthRefresh: true,
     method: 'POST',
     body: payload,
   });
@@ -116,9 +126,10 @@ export function claimPaymentTag(
 
 export function completeOnboardingPin(
   payload: { onboardingSessionToken: string; pin: string },
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<AuthResponse> {
   return client(api).request('/api/v1/auth/onboarding/pin', {
+    skipAuthRefresh: true,
     method: 'POST',
     body: payload,
   });
@@ -126,9 +137,10 @@ export function completeOnboardingPin(
 
 export function refreshSession(
   payload: { refreshToken: string },
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<AuthResponse> {
   return client(api).request('/api/v1/auth/refresh', {
+    skipAuthRefresh: true,
     method: 'POST',
     body: payload,
   });
@@ -136,9 +148,10 @@ export function refreshSession(
 
 export function unlockSession(
   payload: { refreshToken: string; pin: string },
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<AuthResponse> {
   return client(api).request('/api/v1/auth/unlock', {
+    skipAuthRefresh: true,
     method: 'POST',
     body: payload,
   });
@@ -147,7 +160,7 @@ export function unlockSession(
 export function logoutCurrentDevice(
   payload: { refreshToken: string },
   options?: RequestOptions,
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<MessageResponse> {
   return client(api).request('/api/v1/auth/logout', {
     method: 'POST',
@@ -159,7 +172,7 @@ export function logoutCurrentDevice(
 
 export function logoutAllDevices(
   options?: RequestOptions,
-  api?: ApiClient,
+  api?: ApiClient
 ): Promise<MessageResponse> {
   return client(api).request('/api/v1/auth/logout-all', {
     method: 'POST',

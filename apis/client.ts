@@ -1,10 +1,12 @@
 import type { ApiErrorEnvelope, ApiEnvelope } from './types';
 
 type AccessTokenProvider = () => Promise<string | null> | string | null;
+type RefreshAccessTokenProvider = () => Promise<string | null>;
 
 type ApiClientOptions = {
   baseUrl?: string;
   getAccessToken?: AccessTokenProvider;
+  refreshAccessToken?: RefreshAccessTokenProvider;
 };
 
 type RequestOptions = {
@@ -13,6 +15,7 @@ type RequestOptions = {
   accessToken?: string;
   idempotencyKey?: string;
   signal?: AbortSignal;
+  skipAuthRefresh?: boolean;
 };
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
@@ -48,6 +51,19 @@ function isApiErrorEnvelope(value: unknown): value is ApiErrorEnvelope {
   );
 }
 
+function isUnauthorized(response: Response, payload: unknown) {
+  if (response.status === 401) {
+    return true;
+  }
+
+  return (
+    isApiErrorEnvelope(payload) &&
+    ['UNAUTHORIZED', 'TOKEN_EXPIRED', 'ACCESS_TOKEN_EXPIRED', 'INVALID_ACCESS_TOKEN'].includes(
+      payload.error.code
+    )
+  );
+}
+
 export class ApiRequestError extends Error {
   code: string;
   details: unknown;
@@ -79,17 +95,36 @@ export class ApiRequestError extends Error {
 export class ApiClient {
   private baseUrl: string;
   private getAccessToken: AccessTokenProvider | null;
+  private refreshAccessToken: RefreshAccessTokenProvider | null;
+  private refreshPromise: Promise<string | null> | null = null;
 
   constructor(options: ApiClientOptions = {}) {
     this.baseUrl = options.baseUrl ?? API_BASE_URL;
     this.getAccessToken = options.getAccessToken ?? null;
+    this.refreshAccessToken = options.refreshAccessToken ?? null;
   }
 
   setAccessTokenProvider(getAccessToken: AccessTokenProvider | null) {
     this.getAccessToken = getAccessToken;
   }
 
-  async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  setRefreshAccessTokenProvider(refreshAccessToken: RefreshAccessTokenProvider | null) {
+    this.refreshAccessToken = refreshAccessToken;
+  }
+
+  private async getFreshAccessToken() {
+    if (!this.refreshAccessToken) {
+      return null;
+    }
+
+    this.refreshPromise ??= this.refreshAccessToken().finally(() => {
+      this.refreshPromise = null;
+    });
+
+    return this.refreshPromise;
+  }
+
+  private async fetchRequest<T>(path: string, options: RequestOptions, accessToken: string | null) {
     const headers: Record<string, string> = {
       Accept: 'application/json',
     };
@@ -101,9 +136,6 @@ export class ApiClient {
     if (options.idempotencyKey) {
       headers['Idempotency-Key'] = options.idempotencyKey;
     }
-
-    const accessToken =
-      options.accessToken ?? (this.getAccessToken ? await this.getAccessToken() : null);
 
     if (accessToken) {
       headers.Authorization = `Bearer ${accessToken}`;
@@ -130,9 +162,12 @@ export class ApiClient {
     }
 
     const payload = (await parseResponseBody(response)) as ApiEnvelope<T> | unknown;
+    return { response, payload };
+  }
 
+  private createRequestError(response: Response, payload: unknown) {
     if (isApiErrorEnvelope(payload)) {
-      throw new ApiRequestError({
+      return new ApiRequestError({
         code: payload.error.code,
         message: payload.error.message,
         details: payload.error.details,
@@ -141,26 +176,61 @@ export class ApiClient {
       });
     }
 
-    if (!response.ok) {
-      throw new ApiRequestError({
-        code: `HTTP_${response.status}`,
-        message: response.statusText || 'Request failed.',
-        details: payload,
-        requestId: null,
-        status: response.status,
-      });
+    return new ApiRequestError({
+      code: `HTTP_${response.status}`,
+      message: response.statusText || 'Request failed.',
+      details: payload,
+      requestId: null,
+      status: response.status,
+    });
+  }
+
+  async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+    const accessToken =
+      options.accessToken ?? (this.getAccessToken ? await this.getAccessToken() : null);
+    const firstResult = await this.fetchRequest<T>(path, options, accessToken);
+
+    if (
+      !options.skipAuthRefresh &&
+      isUnauthorized(firstResult.response, firstResult.payload) &&
+      this.refreshAccessToken
+    ) {
+      const freshAccessToken = await this.getFreshAccessToken();
+
+      if (freshAccessToken) {
+        const retryResult = await this.fetchRequest<T>(path, options, freshAccessToken);
+
+        if (isApiErrorEnvelope(retryResult.payload) || !retryResult.response.ok) {
+          throw this.createRequestError(retryResult.response, retryResult.payload);
+        }
+
+        if (
+          typeof retryResult.payload === 'object' &&
+          retryResult.payload !== null &&
+          'success' in retryResult.payload &&
+          (retryResult.payload as { success: unknown }).success === true
+        ) {
+          return (retryResult.payload as unknown as { data: T }).data;
+        }
+
+        return retryResult.payload as T;
+      }
+    }
+
+    if (isApiErrorEnvelope(firstResult.payload) || !firstResult.response.ok) {
+      throw this.createRequestError(firstResult.response, firstResult.payload);
     }
 
     if (
-      typeof payload === 'object' &&
-      payload !== null &&
-      'success' in payload &&
-      (payload as { success: unknown }).success === true
+      typeof firstResult.payload === 'object' &&
+      firstResult.payload !== null &&
+      'success' in firstResult.payload &&
+      (firstResult.payload as { success: unknown }).success === true
     ) {
-      return (payload as unknown as { data: T }).data;
+      return (firstResult.payload as unknown as { data: T }).data;
     }
 
-    return payload as T;
+    return firstResult.payload as T;
   }
 }
 

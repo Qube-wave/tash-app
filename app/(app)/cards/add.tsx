@@ -5,10 +5,11 @@ import {
   type CardRegistrationSession,
 } from '@/apis';
 import { Text } from '@/components/ui/text';
+import { useSession } from '@/providers/session-provider';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, CreditCard } from 'lucide-react-native';
 import * as React from 'react';
-import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, TextInput, type TextInputProps, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,6 +22,10 @@ const DANGER = '#B42318';
 
 function isOtpRequired(session: CardRegistrationSession) {
   return session.status === 'pending' && session.metadata.nextAction === 'submit_otp';
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
 function Field({
@@ -36,7 +41,7 @@ function Field({
   value: string;
   onChangeText: (value: string) => void;
   placeholder: string;
-  keyboardType?: 'default' | 'number-pad';
+  keyboardType?: TextInputProps['keyboardType'];
   secureTextEntry?: boolean;
   maxLength?: number;
 }) {
@@ -74,17 +79,22 @@ function Field({
 export default function AddCardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useSession();
   const [cardNumber, setCardNumber] = React.useState('');
   const [expiryMonth, setExpiryMonth] = React.useState('');
   const [expiryYear, setExpiryYear] = React.useState('');
   const [cvv, setCvv] = React.useState('');
   const [cardPin, setCardPin] = React.useState('');
   const [cardholderName, setCardholderName] = React.useState('');
+  const [email, setEmail] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const sanitizedCardNumber = cardNumber.replace(/\D/g, '');
+  const sessionEmail = user?.email ?? email.trim();
+  const needsEmail = !user?.email;
   const canSubmit =
+    (!needsEmail || isValidEmail(email)) &&
     sanitizedCardNumber.length >= 12 &&
     expiryMonth.length === 2 &&
     expiryYear.length === 4 &&
@@ -108,7 +118,10 @@ export default function AddCardScreen() {
     setErrorMessage(null);
 
     try {
-      const session = await createCardRegistrationSession({ currency: 'NGN' });
+      const session = await createCardRegistrationSession({
+        currency: 'NGN',
+        email: sessionEmail || undefined,
+      });
       const result = await submitCardDetails(session.reference, {
         cardNumber: sanitizedCardNumber,
         expiryMonth,
@@ -194,6 +207,15 @@ export default function AddCardScreen() {
         </View>
 
         <View style={{ gap: 16, marginTop: 28 }}>
+          {needsEmail ? (
+            <Field
+              label="Email"
+              value={email}
+              onChangeText={(value) => setEmail(value.trim())}
+              placeholder="user@example.com"
+              keyboardType="email-address"
+            />
+          ) : null}
           <Field
             label="Card number"
             value={cardNumber}

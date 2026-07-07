@@ -168,6 +168,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [applyAuthResponse, clearSession, refreshToken]);
 
+  useEffect(() => {
+    apiClient.setRefreshAccessTokenProvider(refreshAccessToken);
+
+    return () => {
+      apiClient.setRefreshAccessTokenProvider(null);
+    };
+  }, [refreshAccessToken]);
+
   const value = useMemo<SessionContextValue>(
     () => ({
       status,
