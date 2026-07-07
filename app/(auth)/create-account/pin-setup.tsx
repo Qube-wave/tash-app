@@ -1,9 +1,14 @@
+<<<<<<< HEAD
 import { ApiRequestError, completeOnboardingPin } from '@/apis';
 import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
 import { PinInput } from '@/components/modules/auth/pin-input';
 import { Text } from '@/components/ui/text';
 import { useOnboarding } from '@/providers/onboarding-provider';
 import { useSession } from '@/providers/session-provider';
+=======
+import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
+import { PinInput } from '@/components/modules/auth/pin-input';
+>>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';

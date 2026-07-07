@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import {
   ApiRequestError,
   completeLoginEmailVerification,
@@ -7,6 +8,8 @@ import {
   sendSignupEmailVerification,
   sendSignupPhoneVerification,
 } from '@/apis';
+=======
+>>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
 import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
 import { OtpInput } from '@/components/modules/auth/otp-input';
 import { Text } from '@/components/ui/text';

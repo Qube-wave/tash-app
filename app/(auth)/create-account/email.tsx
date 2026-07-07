@@ -1,8 +1,13 @@
+<<<<<<< HEAD
 import { ApiRequestError, sendSignupEmailVerification } from '@/apis';
 import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
 import { AuthTextInput } from '@/components/modules/auth/auth-text-input';
 import { Text } from '@/components/ui/text';
 import { useOnboarding } from '@/providers/onboarding-provider';
+=======
+import { AuthScreenLayout } from '@/components/modules/auth/auth-screen-layout';
+import { AuthTextInput } from '@/components/modules/auth/auth-text-input';
+>>>>>>> 4edcff91cf02b0ccc5857354ab155381f28cc28e
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
