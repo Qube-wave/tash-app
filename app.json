@@ -40,6 +40,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "10bc6cb2-2e04-474d-a9c8-5dc8b3ebc988"
+      }
+    },
+    "owner": "justcovenant"
   }
 }
