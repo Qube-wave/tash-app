@@ -1,4 +1,5 @@
 import { Logo } from '@/components/ui/logo';
+import { useSession } from '@/providers/session-provider';
 import { Text } from '@/components/ui/text';
 import { CardStack } from '@/components/modules/onboarding/CardStack';
 import { Stack, useRouter } from 'expo-router';
@@ -65,6 +66,21 @@ function AnimatedButton({
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { status } = useSession();
+
+  useEffect(() => {
+    if (status === 'locked') {
+      router.replace('/(auth)/unlock');
+    }
+
+    if (status === 'authenticated') {
+      router.replace('/(app)/(tabs)');
+    }
+  }, [router, status]);
+
+  if (status === 'bootstrapping' || status === 'locked' || status === 'authenticated') {
+    return null;
+  }
 
   return (
     <>

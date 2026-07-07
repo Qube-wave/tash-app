@@ -8,6 +8,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { PortalHost } from '@rn-primitives/portal';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { SessionProvider } from '@/providers/session-provider';
 import { useUniwind } from 'uniwind';
 import { useEffect } from 'react';
 
@@ -35,9 +36,11 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={NAV_THEME[theme ?? 'light']}>
-      <StatusBar style={'dark'} />
-      <Stack screenOptions={{ headerShown: false }} />
-      <PortalHost />
+      <SessionProvider>
+        <StatusBar style={'dark'} />
+        <Stack screenOptions={{ headerShown: false }} />
+        <PortalHost />
+      </SessionProvider>
     </ThemeProvider>
   );
 }
