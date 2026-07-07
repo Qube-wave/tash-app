@@ -8,15 +8,8 @@ import { Text } from '@/components/ui/text';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, CreditCard } from 'lucide-react-native';
 import * as React from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const BG = '#FAFAF1';
@@ -145,20 +138,18 @@ export default function AddCardScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={0}
-      style={{ flex: 1, backgroundColor: BG }}>
+    <View style={{ flex: 1, backgroundColor: BG }}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView
+      <KeyboardAwareScrollView
+        bottomOffset={28}
+        extraKeyboardSpace={24}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
-        automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingTop: insets.top + 14,
           paddingHorizontal: 24,
-          paddingBottom: insets.bottom + 180,
+          paddingBottom: insets.bottom + 220,
         }}>
         <Pressable
           onPress={() => router.back()}
@@ -293,7 +284,7 @@ export default function AddCardScreen() {
             </Text>
           )}
         </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }

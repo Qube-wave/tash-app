@@ -10,6 +10,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SessionProvider } from '@/providers/session-provider';
 import { OnboardingProvider } from '@/providers/onboarding-provider';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { Uniwind } from 'uniwind';
 import { useEffect } from 'react';
 
@@ -37,13 +38,15 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={NAV_THEME.light}>
-      <SessionProvider>
-        <OnboardingProvider>
-          <StatusBar style={'dark'} />
-          <Stack screenOptions={{ headerShown: false }} />
-          <PortalHost />
-        </OnboardingProvider>
-      </SessionProvider>
+      <KeyboardProvider>
+        <SessionProvider>
+          <OnboardingProvider>
+            <StatusBar style={'dark'} />
+            <Stack screenOptions={{ headerShown: false }} />
+            <PortalHost />
+          </OnboardingProvider>
+        </SessionProvider>
+      </KeyboardProvider>
     </ThemeProvider>
   );
 }
