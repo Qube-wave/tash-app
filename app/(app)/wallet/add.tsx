@@ -189,6 +189,8 @@ export default function AddWalletMoneyScreen() {
   const [virtualAccountRequestKey, setVirtualAccountRequestKey] = React.useState<string | null>(
     null
   );
+  const [cardFundingRequestKey, setCardFundingRequestKey] = React.useState<string | null>(null);
+  const [bankFundingRequestKey, setBankFundingRequestKey] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
 
@@ -260,6 +262,14 @@ export default function AddWalletMoneyScreen() {
     return () => controller.abort();
   }, [loadFundingData]);
 
+  React.useEffect(() => {
+    setCardFundingRequestKey(null);
+  }, [amount, selectedCardUuid]);
+
+  React.useEffect(() => {
+    setBankFundingRequestKey(null);
+  }, [amount, selectedMandateUuid]);
+
   const handleCreateVirtualAccount = async () => {
     if (!wallet || busyAction) {
       return;
@@ -304,6 +314,9 @@ export default function AddWalletMoneyScreen() {
     setErrorMessage(null);
     setStatusMessage(null);
 
+    const idempotencyKey = cardFundingRequestKey ?? createIdempotencyKey();
+    setCardFundingRequestKey(idempotencyKey);
+
     try {
       const result = await fundWalletWithCard(
         wallet.walletUuid,
@@ -313,10 +326,12 @@ export default function AddWalletMoneyScreen() {
           currency: wallet.currency,
           transactionPin,
         },
-        { idempotencyKey: createIdempotencyKey() }
+        { idempotencyKey }
       );
+      setCardFundingRequestKey(null);
       setAmount('');
       setTransactionPin('');
+      await loadFundingData();
       setStatusMessage(`Card funding ${titleCase(result.status)}.`);
     } catch (error) {
       setTransactionPin('');
@@ -335,6 +350,9 @@ export default function AddWalletMoneyScreen() {
     setErrorMessage(null);
     setStatusMessage(null);
 
+    const idempotencyKey = bankFundingRequestKey ?? createIdempotencyKey();
+    setBankFundingRequestKey(idempotencyKey);
+
     try {
       const result = await fundWalletWithDirectDebit(
         wallet.walletUuid,
@@ -344,10 +362,12 @@ export default function AddWalletMoneyScreen() {
           currency: wallet.currency,
           transactionPin,
         },
-        { idempotencyKey: createIdempotencyKey() }
+        { idempotencyKey }
       );
+      setBankFundingRequestKey(null);
       setAmount('');
       setTransactionPin('');
+      await loadFundingData();
       setStatusMessage(
         result.status === 'pending' || result.status === 'processing'
           ? 'Direct debit funding processing.'

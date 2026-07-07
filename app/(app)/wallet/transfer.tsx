@@ -3,14 +3,25 @@ import {
   listBanks,
   listWallets,
   resolveBankAccount,
+  resolveRecipient,
   sendBankTransfer,
+  sendTashTransfer,
   type Bank,
   type ResolvedBankAccount,
+  type ResolvedRecipient,
   type Wallet,
 } from '@/apis';
 import { Text } from '@/components/ui/text';
+import { useSession } from '@/providers/session-provider';
 import { Stack, useRouter } from 'expo-router';
-import { ArrowLeft, CheckCircle2, MoveUpRight, Search } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  AtSign,
+  CheckCircle2,
+  Landmark,
+  MoveUpRight,
+  Search,
+} from 'lucide-react-native';
 import * as React from 'react';
 import { ActivityIndicator, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -24,6 +35,8 @@ const BLACK = '#050505';
 const LINE = '#DFE1D4';
 const DANGER = '#B42318';
 const SUCCESS = '#138A51';
+
+type TransferMode = 'tash' | 'bank';
 
 function createIdempotencyKey() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
@@ -68,6 +81,7 @@ function Field({
   placeholder,
   keyboardType = 'default',
   secureTextEntry = false,
+  autoCapitalize = 'sentences',
 }: {
   label: string;
   value: string;
@@ -75,6 +89,7 @@ function Field({
   placeholder: string;
   keyboardType?: 'default' | 'number-pad' | 'decimal-pad';
   secureTextEntry?: boolean;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }) {
   return (
     <View>
@@ -88,6 +103,8 @@ function Field({
         onChangeText={onChangeText}
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={false}
         placeholder={placeholder}
         placeholderTextColor="#A8A29A"
         style={{
@@ -106,41 +123,98 @@ function Field({
   );
 }
 
+function ModeButton({
+  mode,
+  activeMode,
+  label,
+  Icon,
+  onPress,
+}: {
+  mode: TransferMode;
+  activeMode: TransferMode;
+  label: string;
+  Icon: React.ComponentType<{ color: string; size: number; strokeWidth?: number }>;
+  onPress: () => void;
+}) {
+  const active = mode === activeMode;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flex: 1,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: active ? BLACK : '#FFFFFF',
+        borderWidth: 1,
+        borderColor: active ? BLACK : LINE,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 7,
+      }}>
+      <Icon color={active ? '#FFFFFF' : INK} size={18} />
+      <Text
+        font={{ family: 'SourceSans3', weight: 'Bold' }}
+        style={{ color: active ? '#FFFFFF' : INK, fontSize: 14 }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 export default function WalletTransferScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useSession();
+  const [mode, setMode] = React.useState<TransferMode>('tash');
   const [wallet, setWallet] = React.useState<Wallet | null>(null);
   const [banks, setBanks] = React.useState<Bank[]>([]);
   const [selectedBank, setSelectedBank] = React.useState<Bank | null>(null);
   const [bankSearch, setBankSearch] = React.useState('');
   const [accountNumber, setAccountNumber] = React.useState('');
   const [resolvedAccount, setResolvedAccount] = React.useState<ResolvedBankAccount | null>(null);
+  const [paymentTag, setPaymentTag] = React.useState('');
+  const [resolvedRecipient, setResolvedRecipient] = React.useState<ResolvedRecipient | null>(null);
   const [amount, setAmount] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [transactionPin, setTransactionPin] = React.useState('');
+  const [transferRequestKey, setTransferRequestKey] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [isResolving, setIsResolving] = React.useState(false);
+  const [isResolvingBank, setIsResolvingBank] = React.useState(false);
+  const [isResolvingRecipient, setIsResolvingRecipient] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
 
+  const normalizedPaymentTag = paymentTag.replace(/^@/, '').trim().toLowerCase();
   const amountMinor = parseAmountMinor(amount);
   const insufficientBalance = Boolean(wallet && amountMinor > wallet.availableBalance);
+  const isSelfTransfer = Boolean(
+    normalizedPaymentTag && user?.paymentTag?.toLowerCase() === normalizedPaymentTag
+  );
   const filteredBanks = banks.filter((bank) => {
     const query = bankSearch.trim().toLowerCase();
-
-    if (!query) {
-      return true;
-    }
-
     return (
+      !query ||
       bank.name.toLowerCase().includes(query) ||
       bank.code.toLowerCase().includes(query) ||
       bank.currency.toLowerCase().includes(query)
     );
   });
-  const canResolve = Boolean(selectedBank) && accountNumber.length === 10 && !isResolving;
-  const canSubmit =
+  const canResolveBank = Boolean(selectedBank) && accountNumber.length === 10 && !isResolvingBank;
+  const canResolveRecipient =
+    normalizedPaymentTag.length > 0 && !isSelfTransfer && !isResolvingRecipient;
+  const canSubmitTash =
+    mode === 'tash' &&
+    Boolean(wallet) &&
+    Boolean(resolvedRecipient) &&
+    amountMinor > 0 &&
+    !insufficientBalance &&
+    transactionPin.length >= 4 &&
+    !isSubmitting;
+  const canSubmitBank =
+    mode === 'bank' &&
     Boolean(wallet) &&
     Boolean(selectedBank) &&
     Boolean(resolvedAccount) &&
@@ -148,6 +222,7 @@ export default function WalletTransferScreen() {
     !insufficientBalance &&
     transactionPin.length >= 4 &&
     !isSubmitting;
+  const canSubmit = canSubmitTash || canSubmitBank;
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -161,7 +236,6 @@ export default function WalletTransferScreen() {
           listWallets({ signal: controller.signal }),
           listBanks({ signal: controller.signal }),
         ]);
-
         setWallet(wallets[0] ?? null);
         setBanks(bankList);
         setSelectedBank(bankList[0] ?? null);
@@ -179,71 +253,105 @@ export default function WalletTransferScreen() {
     }
 
     loadTransferData();
-
     return () => controller.abort();
   }, []);
 
   React.useEffect(() => {
     setResolvedAccount(null);
+    setTransferRequestKey(null);
   }, [accountNumber, selectedBank?.code]);
 
-  const handleResolve = async () => {
-    if (!canResolve || !selectedBank) {
-      return;
-    }
+  React.useEffect(() => {
+    setResolvedRecipient(null);
+    setTransferRequestKey(null);
+  }, [normalizedPaymentTag]);
 
-    setIsResolving(true);
+  React.useEffect(() => {
+    setTransferRequestKey(null);
+  }, [mode, amount, description, resolvedAccount?.accountNumber, resolvedRecipient?.uuid]);
+
+  const handleResolveBank = async () => {
+    if (!canResolveBank || !selectedBank) return;
+    setIsResolvingBank(true);
     setErrorMessage(null);
     setStatusMessage(null);
-
     try {
-      const account = await resolveBankAccount({ bankCode: selectedBank.code, accountNumber });
-      setResolvedAccount(account);
+      setResolvedAccount(await resolveBankAccount({ bankCode: selectedBank.code, accountNumber }));
     } catch (error) {
       setErrorMessage(
         error instanceof ApiRequestError ? error.message : 'Unable to resolve account.'
       );
     } finally {
-      setIsResolving(false);
+      setIsResolvingBank(false);
+    }
+  };
+
+  const handleResolveRecipient = async () => {
+    if (!canResolveRecipient) return;
+    setIsResolvingRecipient(true);
+    setErrorMessage(null);
+    setStatusMessage(null);
+    try {
+      setResolvedRecipient(await resolveRecipient(normalizedPaymentTag));
+    } catch (error) {
+      setErrorMessage(error instanceof ApiRequestError ? error.message : 'Unable to resolve user.');
+    } finally {
+      setIsResolvingRecipient(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (!canSubmit || !wallet || !selectedBank || !resolvedAccount) {
-      return;
-    }
-
+    if (!canSubmit || !wallet) return;
+    const idempotencyKey = transferRequestKey ?? createIdempotencyKey();
+    setTransferRequestKey(idempotencyKey);
     setIsSubmitting(true);
     setErrorMessage(null);
     setStatusMessage(null);
 
     try {
-      const result = await sendBankTransfer(
-        {
-          walletUuid: wallet.walletUuid,
-          bankCode: selectedBank.code,
-          accountNumber,
-          accountName: resolvedAccount.accountName,
-          amount: amountMinor,
-          currency: wallet.currency,
-          description: description.trim() || undefined,
-          transactionPin,
-        },
-        { idempotencyKey: createIdempotencyKey() }
-      );
-
+      if (mode === 'tash') {
+        if (!resolvedRecipient) return;
+        const result = await sendTashTransfer(
+          {
+            walletUuid: wallet.walletUuid,
+            recipient: resolvedRecipient.paymentTag,
+            amount: amountMinor,
+            currency: wallet.currency,
+            description: description.trim() || undefined,
+            transactionPin,
+          },
+          { idempotencyKey }
+        );
+        setStatusMessage(`Transfer ${titleCase(result.status)}.`);
+      } else {
+        if (!selectedBank || !resolvedAccount) return;
+        const result = await sendBankTransfer(
+          {
+            walletUuid: wallet.walletUuid,
+            bankCode: selectedBank.code,
+            accountNumber,
+            accountName: resolvedAccount.accountName,
+            amount: amountMinor,
+            currency: wallet.currency,
+            description: description.trim() || undefined,
+            transactionPin,
+          },
+          { idempotencyKey }
+        );
+        setStatusMessage(
+          result.status === 'processing'
+            ? 'Transfer processing.'
+            : result.status === 'successful'
+              ? 'Transfer successful.'
+              : result.status === 'failed'
+                ? 'Transfer failed.'
+                : `Transfer ${titleCase(result.status)}.`
+        );
+      }
+      setTransferRequestKey(null);
       setTransactionPin('');
       setAmount('');
       setDescription('');
-      setStatusMessage(
-        result.status === 'processing'
-          ? 'Transfer processing.'
-          : result.status === 'successful'
-            ? 'Transfer successful.'
-            : result.status === 'failed'
-              ? 'Transfer failed.'
-              : `Transfer ${titleCase(result.status)}.`
-      );
     } catch (error) {
       setTransactionPin('');
       setErrorMessage(
@@ -310,18 +418,12 @@ export default function WalletTransferScreen() {
           <Text
             font={{ family: 'SourceSans3', weight: 'SemiBold' }}
             style={{ marginTop: 6, color: MUTED, fontSize: 15, lineHeight: 21 }}>
-            Send money from your wallet balance to a bank account.
+            Send money from your wallet balance to a Tash user or bank account.
           </Text>
         </View>
 
         {wallet ? (
-          <View
-            style={{
-              marginTop: 22,
-              borderRadius: 18,
-              backgroundColor: BLACK,
-              padding: 16,
-            }}>
+          <View style={{ marginTop: 22, borderRadius: 18, backgroundColor: BLACK, padding: 16 }}>
             <Text
               font={{ family: 'SourceSans3', weight: 'SemiBold' }}
               style={{ color: '#D7D7D0', fontSize: 13 }}>
@@ -335,124 +437,211 @@ export default function WalletTransferScreen() {
           </View>
         ) : null}
 
-        <View style={{ marginTop: 26 }}>
-          <Text
-            font={{ family: 'SourceSans3', weight: 'Bold' }}
-            style={{ marginBottom: 10, color: INK, fontSize: 14 }}>
-            Bank
-          </Text>
-          <View
-            style={{
-              height: 50,
-              borderRadius: 18,
-              borderWidth: 1,
-              borderColor: LINE,
-              backgroundColor: '#FFFFFF',
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: 14,
-              marginBottom: 12,
-            }}>
-            <Search color={MUTED} size={18} />
-            <TextInput
-              value={bankSearch}
-              onChangeText={setBankSearch}
-              editable={!isLoading}
-              placeholder="Search banks"
-              placeholderTextColor="#A8A29A"
-              style={{ flex: 1, marginLeft: 8, color: INK, fontSize: 15, fontWeight: '700' }}
-            />
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 10, paddingRight: 4 }}>
-            {filteredBanks.map((bank) => {
-              const selected = selectedBank?.code === bank.code;
-              return (
-                <Pressable
-                  key={bank.code}
-                  onPress={() => setSelectedBank(bank)}
-                  style={{
-                    minWidth: 92,
-                    height: 42,
-                    borderRadius: 21,
-                    paddingHorizontal: 16,
-                    backgroundColor: selected ? BLACK : '#FFFFFF',
-                    borderWidth: 1,
-                    borderColor: selected ? BLACK : LINE,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                  <Text
-                    font={{ family: 'SourceSans3', weight: 'Bold' }}
-                    numberOfLines={1}
-                    style={{ color: selected ? '#FFFFFF' : INK, fontSize: 13 }}>
-                    {bank.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 22 }}>
+          <ModeButton
+            mode="tash"
+            activeMode={mode}
+            label="Tash"
+            Icon={AtSign}
+            onPress={() => setMode('tash')}
+          />
+          <ModeButton
+            mode="bank"
+            activeMode={mode}
+            label="Bank"
+            Icon={Landmark}
+            onPress={() => setMode('bank')}
+          />
         </View>
 
-        <View style={{ gap: 16, marginTop: 24 }}>
-          <Field
-            label="Account number"
-            value={accountNumber}
-            onChangeText={(value) => setAccountNumber(value.replace(/\D/g, '').slice(0, 10))}
-            placeholder="0123456789"
-            keyboardType="number-pad"
-          />
-          <Pressable
-            disabled={!canResolve}
-            onPress={handleResolve}
-            style={{
-              height: 50,
-              borderRadius: 25,
-              backgroundColor: canResolve ? BLACK : '#E5E7DA',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-            {isResolving ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text
-                font={{ family: 'SourceSans3', weight: 'Bold' }}
-                style={{ color: canResolve ? '#FFFFFF' : MUTED, fontSize: 15 }}>
-                Resolve account
-              </Text>
-            )}
-          </Pressable>
-
-          {resolvedAccount ? (
-            <View
+        {mode === 'tash' ? (
+          <View style={{ gap: 16, marginTop: 24 }}>
+            <Field
+              label="Payment tag"
+              value={paymentTag}
+              onChangeText={setPaymentTag}
+              placeholder="receiver"
+              autoCapitalize="none"
+            />
+            <Pressable
+              disabled={!canResolveRecipient}
+              onPress={handleResolveRecipient}
               style={{
-                borderRadius: 18,
-                borderWidth: 1,
-                borderColor: LINE,
-                backgroundColor: '#FFFFFF',
-                padding: 16,
-                flexDirection: 'row',
+                height: 50,
+                borderRadius: 25,
+                backgroundColor: canResolveRecipient ? BLACK : '#E5E7DA',
                 alignItems: 'center',
-                gap: 12,
+                justifyContent: 'center',
               }}>
-              <CheckCircle2 color={ORANGE} size={23} />
-              <View style={{ flex: 1 }}>
+              {isResolvingRecipient ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
                 <Text
                   font={{ family: 'SourceSans3', weight: 'Bold' }}
-                  style={{ color: INK, fontSize: 16 }}>
-                  {resolvedAccount.accountName}
+                  style={{ color: canResolveRecipient ? '#FFFFFF' : MUTED, fontSize: 15 }}>
+                  Resolve user
                 </Text>
-                <Text
-                  font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-                  style={{ marginTop: 1, color: MUTED, fontSize: 13 }}>
-                  {resolvedAccount.bankName} • {resolvedAccount.accountNumber}
-                </Text>
+              )}
+            </Pressable>
+            {isSelfTransfer ? (
+              <Text
+                font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+                style={{ color: DANGER, fontSize: 14 }}>
+                You cannot send money to yourself.
+              </Text>
+            ) : null}
+            {resolvedRecipient ? (
+              <View
+                style={{
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: LINE,
+                  backgroundColor: '#FFFFFF',
+                  padding: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                }}>
+                <CheckCircle2 color={ORANGE} size={23} />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    font={{ family: 'SourceSans3', weight: 'Bold' }}
+                    style={{ color: INK, fontSize: 16 }}>
+                    {resolvedRecipient.firstName} {resolvedRecipient.lastName}
+                  </Text>
+                  <Text
+                    font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+                    style={{ marginTop: 1, color: MUTED, fontSize: 13 }}>
+                    @{resolvedRecipient.paymentTag}
+                  </Text>
+                </View>
               </View>
-            </View>
-          ) : null}
+            ) : null}
+          </View>
+        ) : null}
 
+        {mode === 'bank' ? (
+          <>
+            <View style={{ marginTop: 26 }}>
+              <Text
+                font={{ family: 'SourceSans3', weight: 'Bold' }}
+                style={{ marginBottom: 10, color: INK, fontSize: 14 }}>
+                Bank
+              </Text>
+              <View
+                style={{
+                  height: 50,
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: LINE,
+                  backgroundColor: '#FFFFFF',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 14,
+                  marginBottom: 12,
+                }}>
+                <Search color={MUTED} size={18} />
+                <TextInput
+                  value={bankSearch}
+                  onChangeText={setBankSearch}
+                  editable={!isLoading}
+                  placeholder="Search banks"
+                  placeholderTextColor="#A8A29A"
+                  style={{ flex: 1, marginLeft: 8, color: INK, fontSize: 15, fontWeight: '700' }}
+                />
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 10, paddingRight: 4 }}>
+                {filteredBanks.map((bank) => {
+                  const selected = selectedBank?.code === bank.code;
+                  return (
+                    <Pressable
+                      key={bank.code}
+                      onPress={() => setSelectedBank(bank)}
+                      style={{
+                        minWidth: 92,
+                        height: 42,
+                        borderRadius: 21,
+                        paddingHorizontal: 16,
+                        backgroundColor: selected ? BLACK : '#FFFFFF',
+                        borderWidth: 1,
+                        borderColor: selected ? BLACK : LINE,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                      <Text
+                        font={{ family: 'SourceSans3', weight: 'Bold' }}
+                        numberOfLines={1}
+                        style={{ color: selected ? '#FFFFFF' : INK, fontSize: 13 }}>
+                        {bank.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+            <View style={{ gap: 16, marginTop: 24 }}>
+              <Field
+                label="Account number"
+                value={accountNumber}
+                onChangeText={(value) => setAccountNumber(value.replace(/\D/g, '').slice(0, 10))}
+                placeholder="0123456789"
+                keyboardType="number-pad"
+              />
+              <Pressable
+                disabled={!canResolveBank}
+                onPress={handleResolveBank}
+                style={{
+                  height: 50,
+                  borderRadius: 25,
+                  backgroundColor: canResolveBank ? BLACK : '#E5E7DA',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                {isResolvingBank ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text
+                    font={{ family: 'SourceSans3', weight: 'Bold' }}
+                    style={{ color: canResolveBank ? '#FFFFFF' : MUTED, fontSize: 15 }}>
+                    Resolve account
+                  </Text>
+                )}
+              </Pressable>
+              {resolvedAccount ? (
+                <View
+                  style={{
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: LINE,
+                    backgroundColor: '#FFFFFF',
+                    padding: 16,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 12,
+                  }}>
+                  <CheckCircle2 color={ORANGE} size={23} />
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      font={{ family: 'SourceSans3', weight: 'Bold' }}
+                      style={{ color: INK, fontSize: 16 }}>
+                      {resolvedAccount.accountName}
+                    </Text>
+                    <Text
+                      font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+                      style={{ marginTop: 1, color: MUTED, fontSize: 13 }}>
+                      {resolvedAccount.bankName} • {resolvedAccount.accountNumber}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          </>
+        ) : null}
+
+        <View style={{ gap: 16, marginTop: 24 }}>
           <Field
             label="Amount"
             value={amount}
@@ -480,10 +669,9 @@ export default function WalletTransferScreen() {
           <Text
             font={{ family: 'SourceSans3', weight: 'SemiBold' }}
             style={{ marginTop: 14, color: DANGER, fontSize: 14 }}>
-            Amount is higher than your available balance.
+            Amount is higher than your available balance. Fund your wallet first.
           </Text>
         ) : null}
-
         {statusMessage ? (
           <Text
             font={{ family: 'SourceSans3', weight: 'SemiBold' }}
@@ -491,7 +679,6 @@ export default function WalletTransferScreen() {
             {statusMessage}
           </Text>
         ) : null}
-
         {errorMessage ? (
           <Text
             font={{ family: 'SourceSans3', weight: 'SemiBold' }}
