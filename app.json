@@ -17,7 +17,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#FFF6EE"
-      }
+      },
+      "package": "com.justcovenant.tash"
     },
     "web": {
       "bundler": "metro",

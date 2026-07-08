@@ -141,6 +141,7 @@ export type ResolvedRecipient = {
 };
 
 export type TransferStatus = 'pending' | 'processing' | 'successful' | 'failed' | string;
+export type TransferFundingSource = 'wallet' | 'card' | 'direct_debit';
 
 export type TashTransfer = {
   reference: string;

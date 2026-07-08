@@ -1,14 +1,20 @@
 import {
   ApiRequestError,
   listBanks,
+  listCards,
+  listDirectDebitMandates,
   listWallets,
+  requeryTransfer,
   resolveBankAccount,
   resolveRecipient,
   sendBankTransfer,
   sendTashTransfer,
   type Bank,
+  type Card,
+  type DirectDebitMandate,
   type ResolvedBankAccount,
   type ResolvedRecipient,
+  type TransferFundingSource,
   type Wallet,
 } from '@/apis';
 import { Text } from '@/components/ui/text';
@@ -18,6 +24,7 @@ import {
   ArrowLeft,
   AtSign,
   CheckCircle2,
+  CreditCard,
   Landmark,
   MoveUpRight,
   Search,
@@ -123,26 +130,23 @@ function Field({
   );
 }
 
-function ModeButton({
-  mode,
-  activeMode,
+function SegmentButton({
+  active,
   label,
   Icon,
   onPress,
 }: {
-  mode: TransferMode;
-  activeMode: TransferMode;
+  active: boolean;
   label: string;
   Icon: React.ComponentType<{ color: string; size: number; strokeWidth?: number }>;
   onPress: () => void;
 }) {
-  const active = mode === activeMode;
-
   return (
     <Pressable
       onPress={onPress}
       style={{
         flex: 1,
+        minWidth: 0,
         height: 48,
         borderRadius: 24,
         backgroundColor: active ? BLACK : '#FFFFFF',
@@ -152,10 +156,12 @@ function ModeButton({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 7,
+        paddingHorizontal: 10,
       }}>
       <Icon color={active ? '#FFFFFF' : INK} size={18} />
       <Text
         font={{ family: 'SourceSans3', weight: 'Bold' }}
+        numberOfLines={1}
         style={{ color: active ? '#FFFFFF' : INK, fontSize: 14 }}>
         {label}
       </Text>
@@ -168,7 +174,12 @@ export default function WalletTransferScreen() {
   const router = useRouter();
   const { user } = useSession();
   const [mode, setMode] = React.useState<TransferMode>('tash');
+  const [fundingSource, setFundingSource] = React.useState<TransferFundingSource>('wallet');
   const [wallet, setWallet] = React.useState<Wallet | null>(null);
+  const [cards, setCards] = React.useState<Card[]>([]);
+  const [mandates, setMandates] = React.useState<DirectDebitMandate[]>([]);
+  const [selectedCardUuid, setSelectedCardUuid] = React.useState<string | null>(null);
+  const [selectedMandateUuid, setSelectedMandateUuid] = React.useState<string | null>(null);
   const [banks, setBanks] = React.useState<Bank[]>([]);
   const [selectedBank, setSelectedBank] = React.useState<Bank | null>(null);
   const [bankSearch, setBankSearch] = React.useState('');
@@ -180,16 +191,22 @@ export default function WalletTransferScreen() {
   const [description, setDescription] = React.useState('');
   const [transactionPin, setTransactionPin] = React.useState('');
   const [transferRequestKey, setTransferRequestKey] = React.useState<string | null>(null);
+  const [processingReference, setProcessingReference] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isResolvingBank, setIsResolvingBank] = React.useState(false);
   const [isResolvingRecipient, setIsResolvingRecipient] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isRequerying, setIsRequerying] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
 
-  const normalizedPaymentTag = paymentTag.replace(/^@/, '').trim().toLowerCase();
+  const activeCards = cards.filter((card) => card.status === 'active');
+  const activeMandates = mandates.filter((mandate) => mandate.status === 'active');
+  const normalizedPaymentTag = paymentTag.replace(/^[@$]/, '').trim().toLowerCase();
   const amountMinor = parseAmountMinor(amount);
-  const insufficientBalance = Boolean(wallet && amountMinor > wallet.availableBalance);
+  const insufficientBalance = Boolean(
+    fundingSource === 'wallet' && wallet && amountMinor > wallet.availableBalance
+  );
   const isSelfTransfer = Boolean(
     normalizedPaymentTag && user?.paymentTag?.toLowerCase() === normalizedPaymentTag
   );
@@ -202,6 +219,10 @@ export default function WalletTransferScreen() {
       bank.currency.toLowerCase().includes(query)
     );
   });
+  const hasFundingSource =
+    fundingSource === 'wallet' ||
+    (fundingSource === 'card' && Boolean(selectedCardUuid)) ||
+    (fundingSource === 'direct_debit' && Boolean(selectedMandateUuid));
   const canResolveBank = Boolean(selectedBank) && accountNumber.length === 10 && !isResolvingBank;
   const canResolveRecipient =
     normalizedPaymentTag.length > 0 && !isSelfTransfer && !isResolvingRecipient;
@@ -209,6 +230,7 @@ export default function WalletTransferScreen() {
     mode === 'tash' &&
     Boolean(wallet) &&
     Boolean(resolvedRecipient) &&
+    hasFundingSource &&
     amountMinor > 0 &&
     !insufficientBalance &&
     transactionPin.length >= 4 &&
@@ -218,6 +240,7 @@ export default function WalletTransferScreen() {
     Boolean(wallet) &&
     Boolean(selectedBank) &&
     Boolean(resolvedAccount) &&
+    hasFundingSource &&
     amountMinor > 0 &&
     !insufficientBalance &&
     transactionPin.length >= 4 &&
@@ -232,13 +255,29 @@ export default function WalletTransferScreen() {
       setErrorMessage(null);
 
       try {
-        const [wallets, bankList] = await Promise.all([
+        const [wallets, bankList, savedCards, savedMandates] = await Promise.all([
           listWallets({ signal: controller.signal }),
           listBanks({ signal: controller.signal }),
+          listCards({ signal: controller.signal }),
+          listDirectDebitMandates({ signal: controller.signal }),
         ]);
+        const usableCards = savedCards.filter((card) => card.status === 'active');
+        const usableMandates = savedMandates.filter((mandate) => mandate.status === 'active');
         setWallet(wallets[0] ?? null);
         setBanks(bankList);
         setSelectedBank(bankList[0] ?? null);
+        setCards(savedCards);
+        setMandates(savedMandates);
+        setSelectedCardUuid((current) =>
+          current && usableCards.some((card) => card.uuid === current)
+            ? current
+            : (usableCards[0]?.uuid ?? null)
+        );
+        setSelectedMandateUuid((current) =>
+          current && usableMandates.some((mandate) => mandate.uuid === current)
+            ? current
+            : (usableMandates[0]?.uuid ?? null)
+        );
       } catch (error) {
         if (!controller.signal.aborted) {
           setErrorMessage(
@@ -268,7 +307,29 @@ export default function WalletTransferScreen() {
 
   React.useEffect(() => {
     setTransferRequestKey(null);
-  }, [mode, amount, description, resolvedAccount?.accountNumber, resolvedRecipient?.uuid]);
+    setProcessingReference(null);
+  }, [
+    mode,
+    fundingSource,
+    amount,
+    description,
+    resolvedAccount?.accountNumber,
+    resolvedRecipient?.uuid,
+    selectedCardUuid,
+    selectedMandateUuid,
+  ]);
+
+  const buildFundingPayload = () => {
+    if (fundingSource === 'card') {
+      return { fundingSource, cardUuid: selectedCardUuid ?? undefined };
+    }
+
+    if (fundingSource === 'direct_debit') {
+      return { fundingSource, mandateUuid: selectedMandateUuid ?? undefined };
+    }
+
+    return { fundingSource };
+  };
 
   const handleResolveBank = async () => {
     if (!canResolveBank || !selectedBank) return;
@@ -319,6 +380,7 @@ export default function WalletTransferScreen() {
             currency: wallet.currency,
             description: description.trim() || undefined,
             transactionPin,
+            ...buildFundingPayload(),
           },
           { idempotencyKey }
         );
@@ -335,11 +397,15 @@ export default function WalletTransferScreen() {
             currency: wallet.currency,
             description: description.trim() || undefined,
             transactionPin,
+            ...buildFundingPayload(),
           },
           { idempotencyKey }
         );
+        if (result.status === 'processing' || result.status === 'pending') {
+          setProcessingReference(result.reference);
+        }
         setStatusMessage(
-          result.status === 'processing'
+          result.status === 'processing' || result.status === 'pending'
             ? 'Transfer processing.'
             : result.status === 'successful'
               ? 'Transfer successful.'
@@ -359,6 +425,25 @@ export default function WalletTransferScreen() {
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleRequery = async () => {
+    if (!processingReference || isRequerying) return;
+    setIsRequerying(true);
+    setErrorMessage(null);
+    try {
+      const result = await requeryTransfer(processingReference);
+      setStatusMessage(`Transfer ${titleCase(result.status)}.`);
+      if (result.status !== 'processing' && result.status !== 'pending') {
+        setProcessingReference(null);
+      }
+    } catch (error) {
+      setErrorMessage(
+        error instanceof ApiRequestError ? error.message : 'Unable to refresh transfer status.'
+      );
+    } finally {
+      setIsRequerying(false);
     }
   };
 
@@ -418,7 +503,7 @@ export default function WalletTransferScreen() {
           <Text
             font={{ family: 'SourceSans3', weight: 'SemiBold' }}
             style={{ marginTop: 6, color: MUTED, fontSize: 15, lineHeight: 21 }}>
-            Send money from your wallet balance to a Tash user or bank account.
+            Send from wallet, saved card, or active direct debit mandate.
           </Text>
         </View>
 
@@ -427,7 +512,7 @@ export default function WalletTransferScreen() {
             <Text
               font={{ family: 'SourceSans3', weight: 'SemiBold' }}
               style={{ color: '#D7D7D0', fontSize: 13 }}>
-              Available balance
+              Wallet balance
             </Text>
             <Text
               font={{ family: 'SourceSans3', weight: 'Bold' }}
@@ -438,21 +523,155 @@ export default function WalletTransferScreen() {
         ) : null}
 
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 22 }}>
-          <ModeButton
-            mode="tash"
-            activeMode={mode}
+          <SegmentButton
+            active={mode === 'tash'}
             label="Tash"
             Icon={AtSign}
             onPress={() => setMode('tash')}
           />
-          <ModeButton
-            mode="bank"
-            activeMode={mode}
+          <SegmentButton
+            active={mode === 'bank'}
             label="Bank"
             Icon={Landmark}
             onPress={() => setMode('bank')}
           />
         </View>
+
+        <View style={{ marginTop: 24 }}>
+          <Text
+            font={{ family: 'SourceSans3', weight: 'Bold' }}
+            style={{ marginBottom: 10, color: INK, fontSize: 14 }}>
+            Funding source
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <SegmentButton
+              active={fundingSource === 'wallet'}
+              label="Wallet"
+              Icon={Landmark}
+              onPress={() => setFundingSource('wallet')}
+            />
+            <SegmentButton
+              active={fundingSource === 'card'}
+              label="Card"
+              Icon={CreditCard}
+              onPress={() => setFundingSource('card')}
+            />
+            <SegmentButton
+              active={fundingSource === 'direct_debit'}
+              label="Debit"
+              Icon={Landmark}
+              onPress={() => setFundingSource('direct_debit')}
+            />
+          </View>
+        </View>
+
+        {fundingSource === 'card' ? (
+          <View style={{ gap: 10, marginTop: 14 }}>
+            {activeCards.length > 0 ? (
+              activeCards.map((card) => {
+                const selected = selectedCardUuid === card.uuid;
+                return (
+                  <Pressable
+                    key={card.uuid}
+                    onPress={() => setSelectedCardUuid(card.uuid)}
+                    style={{
+                      minHeight: 54,
+                      borderRadius: 18,
+                      borderWidth: 1,
+                      borderColor: selected ? BLACK : LINE,
+                      backgroundColor: selected ? BLACK : '#FFFFFF',
+                      justifyContent: 'center',
+                      paddingHorizontal: 16,
+                    }}>
+                    <Text
+                      font={{ family: 'SourceSans3', weight: 'Bold' }}
+                      style={{ color: selected ? '#FFFFFF' : INK, fontSize: 15 }}>
+                      {titleCase(card.brand)} •••• {card.lastFourDigits}
+                    </Text>
+                    <Text
+                      font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+                      style={{ marginTop: 1, color: selected ? '#D7D7D0' : MUTED, fontSize: 13 }}>
+                      {card.currency}
+                    </Text>
+                  </Pressable>
+                );
+              })
+            ) : (
+              <Pressable
+                onPress={() => router.push('/cards/add' as never)}
+                style={{
+                  minHeight: 64,
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: LINE,
+                  backgroundColor: '#FFFFFF',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 14,
+                }}>
+                <Text
+                  font={{ family: 'SourceSans3', weight: 'Bold' }}
+                  style={{ color: INK, fontSize: 15 }}>
+                  Add a saved card
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        ) : null}
+
+        {fundingSource === 'direct_debit' ? (
+          <View style={{ gap: 10, marginTop: 14 }}>
+            {activeMandates.length > 0 ? (
+              activeMandates.map((mandate) => {
+                const selected = selectedMandateUuid === mandate.uuid;
+                return (
+                  <Pressable
+                    key={mandate.uuid}
+                    onPress={() => setSelectedMandateUuid(mandate.uuid)}
+                    style={{
+                      minHeight: 54,
+                      borderRadius: 18,
+                      borderWidth: 1,
+                      borderColor: selected ? BLACK : LINE,
+                      backgroundColor: selected ? BLACK : '#FFFFFF',
+                      justifyContent: 'center',
+                      paddingHorizontal: 16,
+                    }}>
+                    <Text
+                      font={{ family: 'SourceSans3', weight: 'Bold' }}
+                      style={{ color: selected ? '#FFFFFF' : INK, fontSize: 15 }}>
+                      {mandate.bankName} •••• {mandate.accountNumberLastFour}
+                    </Text>
+                    <Text
+                      font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+                      style={{ marginTop: 1, color: selected ? '#D7D7D0' : MUTED, fontSize: 13 }}>
+                      {titleCase(mandate.status)}
+                    </Text>
+                  </Pressable>
+                );
+              })
+            ) : (
+              <Pressable
+                onPress={() => router.push('/direct-debit/new' as never)}
+                style={{
+                  minHeight: 64,
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: LINE,
+                  backgroundColor: '#FFFFFF',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 14,
+                }}>
+                <Text
+                  font={{ family: 'SourceSans3', weight: 'Bold' }}
+                  style={{ color: INK, fontSize: 15 }}>
+                  Link a bank mandate
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        ) : null}
 
         {mode === 'tash' ? (
           <View style={{ gap: 16, marginTop: 24 }}>
@@ -669,7 +888,8 @@ export default function WalletTransferScreen() {
           <Text
             font={{ family: 'SourceSans3', weight: 'SemiBold' }}
             style={{ marginTop: 14, color: DANGER, fontSize: 14 }}>
-            Amount is higher than your available balance. Fund your wallet first.
+            Amount is higher than your wallet balance. Choose card/direct debit or fund your wallet
+            first.
           </Text>
         ) : null}
         {statusMessage ? (
@@ -678,6 +898,29 @@ export default function WalletTransferScreen() {
             style={{ marginTop: 16, color: SUCCESS, fontSize: 14, textAlign: 'center' }}>
             {statusMessage}
           </Text>
+        ) : null}
+        {processingReference ? (
+          <Pressable
+            disabled={isRequerying}
+            onPress={handleRequery}
+            style={{
+              marginTop: 14,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: BLACK,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            {isRequerying ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text
+                font={{ family: 'SourceSans3', weight: 'Bold' }}
+                style={{ color: '#FFFFFF', fontSize: 14 }}>
+                Check status
+              </Text>
+            )}
+          </Pressable>
         ) : null}
         {errorMessage ? (
           <Text
