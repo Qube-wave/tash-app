@@ -278,6 +278,23 @@ export default function AccountDetailsScreen() {
             {user?.email ? 'Update email' : 'Add email'}
           </Text>
         </Pressable>
+
+        <Pressable
+          onPress={() => router.push('/settings/phone' as never)}
+          style={{
+            marginTop: 12,
+            height: 52,
+            borderRadius: 26,
+            backgroundColor: BLACK,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Text
+            font={{ family: 'SourceSans3', weight: 'Bold' }}
+            style={{ color: '#FFFFFF', fontSize: 15 }}>
+            {user?.phoneNumber ? 'Update phone' : 'Add phone'}
+          </Text>
+        </Pressable>
       </ScrollView>
     </View>
   );

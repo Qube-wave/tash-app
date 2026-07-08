@@ -18,7 +18,35 @@ type RequestOptions = {
   skipAuthRefresh?: boolean;
 };
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
+const PRODUCTION_API_BASE_URL = 'https://api.usetash.app/';
+const RAW_API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? PRODUCTION_API_BASE_URL;
+
+function isProductionBundle() {
+  return typeof __DEV__ !== 'undefined' ? !__DEV__ : process.env.NODE_ENV === 'production';
+}
+
+function isLocalOrPrivateApiUrl(baseUrl: string) {
+  try {
+    const url = new URL(baseUrl);
+    const hostname = url.hostname.toLowerCase();
+
+    return (
+      url.protocol !== 'https:' ||
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('192.168.') ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
+    );
+  } catch {
+    return true;
+  }
+}
+
+const API_BASE_URL =
+  isProductionBundle() && isLocalOrPrivateApiUrl(RAW_API_BASE_URL)
+    ? PRODUCTION_API_BASE_URL
+    : RAW_API_BASE_URL;
 
 function joinUrl(baseUrl: string, path: string) {
   if (!baseUrl) {

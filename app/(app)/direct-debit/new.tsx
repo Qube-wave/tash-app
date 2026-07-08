@@ -97,6 +97,7 @@ export default function NewDirectDebitMandateScreen() {
   const canStartSetup = missingContactDetails.length === 0;
   const missingContactLabel = missingContactDetails.join(' and ');
   const missingEmail = !hasEmail;
+  const missingPhoneNumber = !hasPhoneNumber;
 
   const loadBanks = React.useCallback(async (signal?: AbortSignal) => {
     setIsLoadingBanks(true);
@@ -315,7 +316,12 @@ export default function NewDirectDebitMandateScreen() {
                       pathname: '/settings/email' as never,
                       params: { next: '/direct-debit/new' },
                     })
-                  : router.push('/settings/account-details' as never)
+                  : missingPhoneNumber
+                    ? router.push({
+                        pathname: '/settings/phone' as never,
+                        params: { next: '/direct-debit/new' },
+                      })
+                    : router.push('/settings/account-details' as never)
               }
               style={{
                 alignSelf: 'flex-start',
@@ -330,7 +336,7 @@ export default function NewDirectDebitMandateScreen() {
               <Text
                 font={{ family: 'SourceSans3', weight: 'Bold' }}
                 style={{ color: '#FFFFFF', fontSize: 14 }}>
-                {missingEmail ? 'Add email' : 'View profile'}
+                {missingEmail ? 'Add email' : missingPhoneNumber ? 'Add phone' : 'View profile'}
               </Text>
             </Pressable>
           </View>

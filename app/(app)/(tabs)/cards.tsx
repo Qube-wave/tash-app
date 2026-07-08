@@ -404,7 +404,17 @@ export default function CardsScreen() {
       return false;
     }
 
-    setErrorMessage(`Add your ${missingPaymentContactLabel} to your profile before ${action}.`);
+    if (!user?.phoneNumber) {
+      router.push({
+        pathname: '/settings/phone' as never,
+        params: { next },
+      });
+      return false;
+    }
+
+    setErrorMessage(
+      'Add your ' + missingPaymentContactLabel + ' to your profile before ' + action + '.'
+    );
     return false;
   };
 

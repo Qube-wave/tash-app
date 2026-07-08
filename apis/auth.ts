@@ -124,6 +124,32 @@ export function completeCurrentUserEmailVerification(
   });
 }
 
+export function sendCurrentUserPhoneVerification(
+  payload: { phoneNumber: string },
+  options?: RequestOptions,
+  api?: ApiClient
+): Promise<MessageResponse> {
+  return client(api).request('/api/v1/auth/me/phone/send-verification', {
+    method: 'POST',
+    body: payload,
+    accessToken: options?.accessToken,
+    signal: options?.signal,
+  });
+}
+
+export function completeCurrentUserPhoneVerification(
+  payload: { phoneNumber: string; token: string },
+  options?: RequestOptions,
+  api?: ApiClient
+): Promise<PublicUserProfile> {
+  return client(api).request('/api/v1/auth/me/phone/complete-verification', {
+    method: 'POST',
+    body: payload,
+    accessToken: options?.accessToken,
+    signal: options?.signal,
+  });
+}
+
 export function completeOnboardingProfile(
   payload: {
     onboardingSessionToken: string;
