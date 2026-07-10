@@ -3,7 +3,19 @@ import type { DirectDebitMandate, RequestOptions } from './types';
 
 const client = (api?: ApiClient) => api ?? apiClient;
 
-export function createDirectDebitMandate(
+function shouldLogDirectDebitResponses() {
+  return (globalThis as { __DEV__?: boolean }).__DEV__ === true;
+}
+
+function logDirectDebitResponse<T>(action: string, response: T) {
+  if (shouldLogDirectDebitResponses()) {
+    console.log(`[direct-debit] ${action} response`, response);
+  }
+
+  return response;
+}
+
+export async function createDirectDebitMandate(
   payload: {
     bankCode: string;
     accountNumber: string;
@@ -14,42 +26,51 @@ export function createDirectDebitMandate(
   options?: RequestOptions,
   api?: ApiClient
 ): Promise<DirectDebitMandate> {
-  return client(api).request('/api/v1/direct-debit/mandates', {
+  const response = await client(api).request<DirectDebitMandate>('/api/v1/direct-debit/mandates', {
     method: 'POST',
     body: payload,
     accessToken: options?.accessToken,
     signal: options?.signal,
   });
+
+  return logDirectDebitResponse('create mandate', response);
 }
 
-export function listDirectDebitMandates(
+export async function listDirectDebitMandates(
   options?: RequestOptions,
   api?: ApiClient
 ): Promise<DirectDebitMandate[]> {
-  return client(api).request('/api/v1/direct-debit/mandates', {
+  const response = await client(api).request<DirectDebitMandate[]>('/api/v1/direct-debit/mandates', {
     accessToken: options?.accessToken,
     signal: options?.signal,
   });
+
+  return logDirectDebitResponse('list mandates', response);
 }
 
-export function getDirectDebitMandate(
+export async function getDirectDebitMandate(
   uuid: string,
   options?: RequestOptions,
   api?: ApiClient
 ): Promise<DirectDebitMandate> {
-  return client(api).request(`/api/v1/direct-debit/mandates/${encodeURIComponent(uuid)}`, {
-    accessToken: options?.accessToken,
-    signal: options?.signal,
-  });
+  const response = await client(api).request<DirectDebitMandate>(
+    `/api/v1/direct-debit/mandates/${encodeURIComponent(uuid)}`,
+    {
+      accessToken: options?.accessToken,
+      signal: options?.signal,
+    }
+  );
+
+  return logDirectDebitResponse('get mandate', response);
 }
 
-export function authorizeDirectDebitMandate(
+export async function authorizeDirectDebitMandate(
   uuid: string,
   payload?: { authorizationReference?: string },
   options?: RequestOptions,
   api?: ApiClient
 ): Promise<DirectDebitMandate> {
-  return client(api).request(
+  const response = await client(api).request<DirectDebitMandate>(
     `/api/v1/direct-debit/mandates/${encodeURIComponent(uuid)}/authorize`,
     {
       method: 'POST',
@@ -58,18 +79,25 @@ export function authorizeDirectDebitMandate(
       signal: options?.signal,
     }
   );
+
+  return logDirectDebitResponse('authorize mandate', response);
 }
 
-export function revokeDirectDebitMandate(
+export async function revokeDirectDebitMandate(
   uuid: string,
   payload?: { reason?: string },
   options?: RequestOptions,
   api?: ApiClient
 ): Promise<DirectDebitMandate> {
-  return client(api).request(`/api/v1/direct-debit/mandates/${encodeURIComponent(uuid)}/revoke`, {
-    method: 'POST',
-    body: payload,
-    accessToken: options?.accessToken,
-    signal: options?.signal,
-  });
+  const response = await client(api).request<DirectDebitMandate>(
+    `/api/v1/direct-debit/mandates/${encodeURIComponent(uuid)}/revoke`,
+    {
+      method: 'POST',
+      body: payload,
+      accessToken: options?.accessToken,
+      signal: options?.signal,
+    }
+  );
+
+  return logDirectDebitResponse('revoke mandate', response);
 }

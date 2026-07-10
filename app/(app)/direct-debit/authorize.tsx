@@ -29,18 +29,32 @@ function normalizeProviderText(value: string) {
   return value.replace(/\s+/g, ' ').replace(/platform\.Please/g, 'platform. Please').trim();
 }
 
-function getAuthorizationDescription(mandate: DirectDebitMandate | null) {
+function firstSearchParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function getAuthorizationDescription(
+  mandate: DirectDebitMandate | null,
+  fallbackDescription?: string
+) {
   const description = mandate?.metadata?.authorizationDescription;
 
   if (typeof description === 'string' && description.trim().length > 0) {
     return normalizeProviderText(description);
   }
 
+  if (fallbackDescription?.trim()) {
+    return normalizeProviderText(fallbackDescription);
+  }
+
   return 'Complete the provider authorization from this same bank account, then check the status here.';
 }
 
-function getActivationAccounts(mandate: DirectDebitMandate | null): ActivationAccount[] {
-  const description = getAuthorizationDescription(mandate);
+function getActivationAccounts(
+  mandate: DirectDebitMandate | null,
+  fallbackDescription?: string
+): ActivationAccount[] {
+  const description = getAuthorizationDescription(mandate, fallbackDescription);
   const accountPattern =
     /Account Number:\s*(\d{6,})\s+Bank:\s*(.*?)\s+Account Name:\s*([\s\S]*?)(?=\s+OR\s+Account Number:|$)/gi;
 
@@ -49,36 +63,6 @@ function getActivationAccounts(mandate: DirectDebitMandate | null): ActivationAc
     bankName: normalizeProviderText(match[2]),
     accountName: normalizeProviderText(match[3]).replace(/[.;]$/, ''),
   }));
-}
-
-function getProviderAuthorizationSteps(mandate: DirectDebitMandate | null) {
-  const steps = mandate?.metadata?.authorizationSteps;
-
-  if (Array.isArray(steps)) {
-    return steps
-      .filter((step): step is string => typeof step === 'string')
-      .map(normalizeProviderText)
-      .filter(Boolean);
-  }
-
-  return [getAuthorizationDescription(mandate)];
-}
-
-function getAuthorizationSteps(mandate: DirectDebitMandate | null, accounts: ActivationAccount[]) {
-  if (accounts.length > 0) {
-    const accountSuffix = mandate?.accountNumberLastFour
-      ? ' ending in ' + mandate.accountNumberLastFour
-      : '';
-
-    return [
-      'Pay exactly ₦50.00 from the linked bank account' + accountSuffix + '.',
-      'Use your Mobile Banking App or Internet Banking platform.',
-      'Send the payment to one of the NIBSS activation accounts below.',
-      'Return here and tap Check status.',
-    ];
-  }
-
-  return getProviderAuthorizationSteps(mandate);
 }
 
 function getStatusContent(status?: DirectDebitMandate['status']) {
@@ -111,17 +95,20 @@ function getStatusContent(status?: DirectDebitMandate['status']) {
 export default function AuthorizeDirectDebitMandateScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { uuid } = useLocalSearchParams<{ uuid?: string }>();
-  const mandateUuid = Array.isArray(uuid) ? uuid[0] : uuid;
+  const { authorizationDescription, uuid } = useLocalSearchParams<{
+    authorizationDescription?: string;
+    uuid?: string;
+  }>();
+  const mandateUuid = firstSearchParam(uuid);
+  const routeAuthorizationDescription = firstSearchParam(authorizationDescription);
   const [mandate, setMandate] = React.useState<DirectDebitMandate | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isChecking, setIsChecking] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  const activationAccounts = React.useMemo(() => getActivationAccounts(mandate), [mandate]);
-  const authorizationSteps = React.useMemo(
-    () => getAuthorizationSteps(mandate, activationAccounts),
-    [activationAccounts, mandate]
+  const activationAccounts = React.useMemo(
+    () => getActivationAccounts(mandate, routeAuthorizationDescription),
+    [mandate, routeAuthorizationDescription]
   );
   const statusContent = getStatusContent(mandate?.status);
   const StatusIcon = statusContent.Icon;
@@ -295,81 +282,54 @@ export default function AuthorizeDirectDebitMandateScreen() {
             <Text
               font={{ family: 'SourceSans3', weight: 'Bold' }}
               style={{ color: INK, fontSize: 16 }}>
-              Authorization steps
+              Activation accounts
             </Text>
-            <View style={{ marginTop: 12, gap: 10 }}>
-              {authorizationSteps.map((step, index) => (
-                <View key={step} style={{ flexDirection: 'row', gap: 10 }}>
-                  <View
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 12,
-                      backgroundColor: ORANGE,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginTop: 1,
-                    }}>
-                    <Text
-                      font={{ family: 'SourceSans3', weight: 'Bold' }}
-                      style={{ color: INK, fontSize: 12 }}>
-                      {index + 1}
-                    </Text>
-                  </View>
-                  <Text
-                    font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-                    style={{ flex: 1, color: MUTED, fontSize: 14, lineHeight: 20 }}>
-                    {step}
-                  </Text>
-                </View>
-              ))}
-            </View>
+            <Text
+              font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+              style={{ marginTop: 6, color: MUTED, fontSize: 14, lineHeight: 20 }}>
+              Transfer ₦50 to one of the activation accounts below from the same linked bank
+              account. Long-press an account number to copy it.
+            </Text>
 
             {activationAccounts.length > 0 ? (
-              <View style={{ marginTop: 18 }}>
-                <Text
-                  font={{ family: 'SourceSans3', weight: 'Bold' }}
-                  style={{ color: INK, fontSize: 15 }}>
-                  Activation accounts
-                </Text>
-                <Text
-                  font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-                  style={{ marginTop: 3, color: MUTED, fontSize: 12, lineHeight: 17 }}>
-                  Long-press an account number to copy it.
-                </Text>
-                <View style={{ gap: 10, marginTop: 10 }}>
-                  {activationAccounts.map((account) => (
-                    <View
-                      key={account.accountNumber}
-                      style={{
-                        borderRadius: 16,
-                        borderWidth: 1,
-                        borderColor: LINE,
-                        backgroundColor: '#FAFAF1',
-                        padding: 14,
-                      }}>
-                      <Text
-                        selectable
-                        font={{ family: 'SourceSans3', weight: 'Bold' }}
-                        style={{ color: INK, fontSize: 22 }}>
-                        {account.accountNumber}
-                      </Text>
-                      <Text
-                        font={{ family: 'SourceSans3', weight: 'Bold' }}
-                        style={{ marginTop: 5, color: INK, fontSize: 14 }}>
-                        {account.bankName}
-                      </Text>
-                      <Text
-                        selectable
-                        font={{ family: 'SourceSans3', weight: 'SemiBold' }}
-                        style={{ marginTop: 2, color: MUTED, fontSize: 13 }}>
-                        {account.accountName}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
+              <View style={{ gap: 10, marginTop: 14 }}>
+                {activationAccounts.map((account) => (
+                  <View
+                    key={account.accountNumber}
+                    style={{
+                      borderRadius: 16,
+                      borderWidth: 1,
+                      borderColor: LINE,
+                      backgroundColor: '#FAFAF1',
+                      padding: 14,
+                    }}>
+                    <Text
+                      selectable
+                      font={{ family: 'SourceSans3', weight: 'Bold' }}
+                      style={{ color: INK, fontSize: 22 }}>
+                      {account.accountNumber}
+                    </Text>
+                    <Text
+                      font={{ family: 'SourceSans3', weight: 'Bold' }}
+                      style={{ marginTop: 5, color: INK, fontSize: 14 }}>
+                      {account.bankName}
+                    </Text>
+                    <Text
+                      selectable
+                      font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+                      style={{ marginTop: 2, color: MUTED, fontSize: 13 }}>
+                      {account.accountName}
+                    </Text>
+                  </View>
+                ))}
               </View>
-            ) : null}
+            ) : (
+              <Text
+                font={{ family: 'SourceSans3', weight: 'SemiBold' }}
+                style={{ marginTop: 12, color: DANGER, fontSize: 13, lineHeight: 18 }}>
+                Activation accounts are not available yet. Try checking the mandate again.
+              </Text>
+            )}
           </View>
         ) : null}
 

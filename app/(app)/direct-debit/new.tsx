@@ -230,9 +230,16 @@ export default function NewDirectDebitMandateScreen() {
       });
 
       if (mandate.status === 'requires_authorization') {
+        const authorizationDescription = mandate.metadata?.authorizationDescription;
+
         router.replace({
           pathname: '/direct-debit/authorize' as never,
-          params: { uuid: mandate.uuid },
+          params: {
+            uuid: mandate.uuid,
+            ...(typeof authorizationDescription === 'string' && authorizationDescription.trim()
+              ? { authorizationDescription }
+              : {}),
+          },
         });
         return;
       }
