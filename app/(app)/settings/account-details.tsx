@@ -1,5 +1,6 @@
 import { ApiRequestError, getCurrentUser, type PublicUserProfile } from '@/apis';
 import { Text } from '@/components/ui/text';
+import { useSession } from '@/providers/session-provider';
 import { Stack, useRouter } from 'expo-router';
 import {
   ArrowLeft,
@@ -120,6 +121,7 @@ function Section({ children }: { children: React.ReactNode }) {
 export default function AccountDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { updateUser } = useSession();
   const [user, setUser] = React.useState<PublicUserProfile | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -131,6 +133,7 @@ export default function AccountDetailsScreen() {
       try {
         const currentUser = await getCurrentUser({ signal: controller.signal });
         setUser(currentUser);
+        updateUser(currentUser);
       } catch (error) {
         if (!controller.signal.aborted) {
           setErrorMessage(
@@ -147,7 +150,7 @@ export default function AccountDetailsScreen() {
     loadUser();
 
     return () => controller.abort();
-  }, []);
+  }, [updateUser]);
 
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>

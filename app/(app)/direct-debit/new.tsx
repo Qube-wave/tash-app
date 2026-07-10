@@ -1,9 +1,11 @@
 import {
   ApiRequestError,
+  getCurrentUser,
   createDirectDebitMandate,
   listBanks,
   resolveBankAccount,
   type Bank,
+  type PublicUserProfile,
   type ResolvedBankAccount,
 } from '@/apis';
 import { Text } from '@/components/ui/text';
@@ -75,7 +77,8 @@ function Field({
 export default function NewDirectDebitMandateScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user } = useSession();
+  const { user, updateUser } = useSession();
+  const [profileUser, setProfileUser] = React.useState<PublicUserProfile | null>(null);
   const [banks, setBanks] = React.useState<Bank[]>([]);
   const [selectedBank, setSelectedBank] = React.useState<Bank | null>(null);
   const [bankSearch, setBankSearch] = React.useState('');
@@ -88,8 +91,25 @@ export default function NewDirectDebitMandateScreen() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  const hasEmail = Boolean(user?.email);
-  const hasPhoneNumber = Boolean(user?.phoneNumber);
+  const contactUser = profileUser ?? user;
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+
+    getCurrentUser({ signal: controller.signal })
+      .then((currentUser) => {
+        setProfileUser(currentUser);
+        updateUser(currentUser);
+      })
+      .catch(() => {
+        // Keep using the session user if refreshing the profile fails.
+      });
+
+    return () => controller.abort();
+  }, [updateUser]);
+
+  const hasEmail = Boolean(contactUser?.email);
+  const hasPhoneNumber = Boolean(contactUser?.phoneNumber);
   const missingContactDetails = [
     !hasEmail ? 'email' : null,
     !hasPhoneNumber ? 'phone number' : null,

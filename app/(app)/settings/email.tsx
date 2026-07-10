@@ -212,13 +212,14 @@ export default function EmailSettingsScreen() {
           <Text
             font={{ family: 'SourceSans3', weight: 'Bold' }}
             style={{ color: INK, fontSize: 28 }}>
-            Add email
+            {user?.email ? 'Update email' : 'Add email'}
           </Text>
           <Text
             font={{ family: 'SourceSans3', weight: 'SemiBold' }}
             style={{ marginTop: 6, color: MUTED, fontSize: 15, lineHeight: 21 }}>
-            Verify an email address before setting up payment methods that require provider contact
-            details.
+            {user?.email
+              ? 'Verify a new email address before replacing the one on your account.'
+              : 'Verify an email address before setting up payment methods that require provider contact details.'}
           </Text>
         </View>
 

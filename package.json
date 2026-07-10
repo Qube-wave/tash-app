@@ -7,7 +7,13 @@
     "android": "expo start -c --android",
     "ios": "expo start -c --ios",
     "web": "expo start -c --web",
-    "clean": "rm -rf .expo node_modules"
+    "clean": "rm -rf .expo node_modules",
+    "typecheck": "tsc --noEmit",
+    "build": "expo export --platform web",
+    "build:native": "eas build --platform all --profile production",
+    "build:android": "eas build --platform android --profile production",
+    "build:android:preview": "eas build --platform android --profile preview",
+    "build:ios": "eas build --platform ios --profile production"
   },
   "dependencies": {
     "@expo-google-fonts/playfair-display": "^0.4.2",

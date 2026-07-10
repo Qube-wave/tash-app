@@ -1,5 +1,6 @@
 import {
   ApiRequestError,
+  getCurrentUser,
   deleteCard,
   disableCard,
   listCards,
@@ -7,6 +8,7 @@ import {
   revokeDirectDebitMandate,
   setDefaultCard,
   type Card,
+  type PublicUserProfile,
   type DirectDebitMandate,
 } from '@/apis';
 import { Text } from '@/components/ui/text';
@@ -377,16 +379,19 @@ function MandateRow({
 export default function CardsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user } = useSession();
+  const { user, updateUser } = useSession();
+  const [profileUser, setProfileUser] = React.useState<PublicUserProfile | null>(null);
   const [cards, setCards] = React.useState<Card[]>([]);
   const [mandates, setMandates] = React.useState<DirectDebitMandate[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [busyKey, setBusyKey] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
+  const contactUser = profileUser ?? user;
+
   const missingPaymentContactDetails = [
-    !user?.email ? 'email' : null,
-    !user?.phoneNumber ? 'phone number' : null,
+    !contactUser?.email ? 'email' : null,
+    !contactUser?.phoneNumber ? 'phone number' : null,
   ].filter(Boolean) as string[];
   const canStartPaymentSetup = missingPaymentContactDetails.length === 0;
   const missingPaymentContactLabel = missingPaymentContactDetails.join(' and ');
@@ -396,7 +401,7 @@ export default function CardsScreen() {
       return true;
     }
 
-    if (!user?.email) {
+    if (!contactUser?.email) {
       router.push({
         pathname: '/settings/email' as never,
         params: { next },
@@ -404,7 +409,7 @@ export default function CardsScreen() {
       return false;
     }
 
-    if (!user?.phoneNumber) {
+    if (!contactUser?.phoneNumber) {
       router.push({
         pathname: '/settings/phone' as never,
         params: { next },
@@ -434,34 +439,40 @@ export default function CardsScreen() {
     router.push('/direct-debit/new' as never);
   };
 
-  const loadPaymentMethods = React.useCallback(async (signal: AbortSignal) => {
-    setIsLoading(true);
-    setErrorMessage(null);
+  const loadPaymentMethods = React.useCallback(
+    async (signal: AbortSignal) => {
+      setIsLoading(true);
+      setErrorMessage(null);
 
-    try {
-      const [savedCards, directDebitMandates] = await Promise.all([
-        listCards({ signal }),
-        listDirectDebitMandates({ signal }),
-      ]);
+      try {
+        const [currentUser, savedCards, directDebitMandates] = await Promise.all([
+          getCurrentUser({ signal }),
+          listCards({ signal }),
+          listDirectDebitMandates({ signal }),
+        ]);
 
-      setCards(savedCards);
-      setMandates(directDebitMandates);
-    } catch (error) {
-      if (signal.aborted) {
-        return;
+        setProfileUser(currentUser);
+        updateUser(currentUser);
+        setCards(savedCards);
+        setMandates(directDebitMandates);
+      } catch (error) {
+        if (signal.aborted) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof ApiRequestError
+            ? error.message
+            : 'Unable to load cards and direct debit mandates.'
+        );
+      } finally {
+        if (!signal.aborted) {
+          setIsLoading(false);
+        }
       }
-
-      setErrorMessage(
-        error instanceof ApiRequestError
-          ? error.message
-          : 'Unable to load cards and direct debit mandates.'
-      );
-    } finally {
-      if (!signal.aborted) {
-        setIsLoading(false);
-      }
-    }
-  }, []);
+    },
+    [updateUser]
+  );
 
   useFocusEffect(
     React.useCallback(() => {

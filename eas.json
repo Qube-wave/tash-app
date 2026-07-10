@@ -24,6 +24,9 @@
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://api.usetash.app/"
+      },
+      "android": {
+        "buildType": "apk"
       }
     }
   },

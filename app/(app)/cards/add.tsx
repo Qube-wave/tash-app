@@ -1,8 +1,10 @@
 import {
   ApiRequestError,
   createCardRegistrationSession,
+  getCurrentUser,
   submitCardDetails,
   type CardRegistrationSession,
+  type PublicUserProfile,
 } from '@/apis';
 import { Text } from '@/components/ui/text';
 import { useSession } from '@/providers/session-provider';
@@ -76,7 +78,8 @@ function Field({
 export default function AddCardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user } = useSession();
+  const { user, updateUser } = useSession();
+  const [profileUser, setProfileUser] = React.useState<PublicUserProfile | null>(null);
   const [cardNumber, setCardNumber] = React.useState('');
   const [expiryMonth, setExpiryMonth] = React.useState('');
   const [expiryYear, setExpiryYear] = React.useState('');
@@ -86,9 +89,26 @@ export default function AddCardScreen() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
+  const contactUser = profileUser ?? user;
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+
+    getCurrentUser({ signal: controller.signal })
+      .then((currentUser) => {
+        setProfileUser(currentUser);
+        updateUser(currentUser);
+      })
+      .catch(() => {
+        // Keep using the session user if refreshing the profile fails.
+      });
+
+    return () => controller.abort();
+  }, [updateUser]);
+
   const sanitizedCardNumber = cardNumber.replace(/\D/g, '');
-  const hasEmail = Boolean(user?.email);
-  const hasPhoneNumber = Boolean(user?.phoneNumber);
+  const hasEmail = Boolean(contactUser?.email);
+  const hasPhoneNumber = Boolean(contactUser?.phoneNumber);
   const missingContactDetails = [
     !hasEmail ? 'email' : null,
     !hasPhoneNumber ? 'phone number' : null,
@@ -124,7 +144,7 @@ export default function AddCardScreen() {
     try {
       const session = await createCardRegistrationSession({
         currency: 'NGN',
-        email: user?.email ?? undefined,
+        email: contactUser?.email ?? undefined,
       });
       const result = await submitCardDetails(session.reference, {
         cardNumber: sanitizedCardNumber,
